@@ -1051,18 +1051,37 @@
    */
   let gaugeShown = -1, gaugeRun = null;
   R.drawHorizon = function (run, level) {
+    ensureGrads();
     const danger = level === 2, near = level === 1;
     const h = BE.Run.horizon(run);
     const t = BE.state.time, st = BE.state;
     const pulse = danger ? 0.55 + 0.45 * Math.sin(t * TAU * 0.8) : near ? 0.5 + 0.5 * Math.sin(t * TAU * 0.5) : 0;
+    // montée d'alerte (BE.FX.trackAlert) : la ligne s'embrase 0,6 s
+    const ak = t - BE.FX.alertT, pop = ak >= 0 && ak < 0.6 ? 1 - ak / 0.6 : 0;
     if (danger || near) {
-      g.globalCompositeOperation = "lighter"; g.globalAlpha = danger ? 0.25 + 0.25 * pulse : 0.12 + 0.1 * pulse;
-      g.drawImage(BE.FX.glow(danger ? P.danger : P.or), run.jar.wallL - 20, h - 16, run.jar.wallR - run.jar.wallL + 40, 32);
+      const acol = danger ? P.danger : P.or, wl = run.jar.wallL, wr = run.jar.wallR;
+      g.globalCompositeOperation = "lighter"; g.globalAlpha = Math.min(1, (danger ? 0.25 + 0.25 * pulse : 0.12 + 0.1 * pulse) + 0.4 * pop);
+      g.drawImage(BE.FX.glow(acol), wl - 20, h - 16, wr - wl + 40, 32);
       g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+      // teinte : le col au-dessus de la ligne (la zone qui déborde) rougit / dore
+      const top = Math.max(G.rimY + 4, h - 46);
+      const tg = danger ? grads.tintR : grads.tintA;
+      g.globalAlpha = danger ? 0.7 + 0.3 * pulse : 0.45 + 0.25 * pulse;
+      g.save(); g.translate(0, top); g.scale(1, (h - top) / 46);
+      g.fillStyle = tg; g.fillRect(wl + 2, 0, wr - wl - 4, 46);
+      g.restore(); g.globalAlpha = 1;
+      // étiquette hors du bocal, à gauche de la ligne (lisible à 360 px, symétrique de la jauge)
+      const lx = Math.max(EXT.x0 + 4, 4), cw = wl - 6 - lx, cx = lx + cw / 2;
+      const two = !danger, ph = two ? 30 : 18, sc = 1 + 0.15 * pop;
+      g.globalAlpha = 0.85; g.fillStyle = "rgba(5,6,12,0.8)"; BE.FX.roundRect(g, cx - cw / 2, h - ph / 2, cw, ph, 7); g.fill();
+      g.globalAlpha = 0.6 + 0.4 * pulse; g.strokeStyle = acol; g.lineWidth = 1; BE.FX.roundRect(g, cx - cw / 2, h - ph / 2, cw, ph, 7); g.stroke();
+      g.globalAlpha = 1;
+      if (danger) lbl.alertA.set(3, 0, fmtConst, acol).draw(cx, h + 0.5, 0.5, sc);
+      else { lbl.alertA.set(4, 0, fmtConst, acol).draw(cx, h - 6, 0.5, sc); lbl.alertB.set(5, 0, fmtConst, acol).draw(cx, h + 7, 0.5, sc); }
     }
     g.strokeStyle = danger ? P.danger : near ? P.or : C_DIM70;
-    g.globalAlpha = danger ? 0.55 + 0.45 * pulse : near ? 0.6 + 0.25 * pulse : 1;
-    g.lineWidth = danger ? 1.6 : near ? 1.3 : 1;
+    g.globalAlpha = Math.min(1, (danger ? 0.6 + 0.4 * pulse : near ? 0.65 + 0.25 * pulse : 1) + pop);
+    g.lineWidth = (danger ? 2.2 : near ? 1.6 : 1) + 1.5 * pop;
     g.setLineDash(DASH_H); g.lineDashOffset = -t * 8;
     g.beginPath(); g.moveTo(run.jar.wallL + 2, h); g.lineTo(run.jar.wallR - 2, h); g.stroke();
     g.setLineDash(NO_DASH); g.globalAlpha = 1;
@@ -1298,6 +1317,7 @@
     bag: new Label(11, 800, P.text), swaps: new Label(8, 900, P.eclat), reserve: new Label(9, 800, P.mult, 1.5), fill: new Label(9, 700, P.dim),
     liveE: new Label(13, 900, "#ffffff"), liveM: new Label(13, 900, "#ffffff"), total: new Label(32, 900, "#ffffff", 2.5),
     suiv: new Label(8, 700, P.dim), grav: new Label(7, 700, P.dim), cancel: new Label(16, 900, P.danger), plus1: new Label(10, 900, P.seve, 1),
+    alertA: new Label(10, 900, P.danger, 1.5), alertB: new Label(10, 900, P.danger, 1.5),
   };
   const fmtLune = (n) => "LUNE " + n;
   let BOSS_IDX = null;
@@ -1314,7 +1334,7 @@
   const fmtMultK = (n) => U.fmtMult(n);
   const fmtReserve = (n) => "+" + U.fmtDec(n) + " en réserve";
   const fmtConst = (k) => CONSTS[k];
-  const CONSTS = ["SUIV.", "✕ ANNULÉ", "+1"];
+  const CONSTS = ["SUIV.", "✕ ANNULÉ", "+1", "DANGER", "PRESQUE", "PLEIN"];
 
   // ================================================================ HUD
   function text(t, x, y, f, color, align, base) {
@@ -1353,6 +1373,13 @@
     gr = g.createLinearGradient(0, G.relicBandY, 0, D.H);
     gr.addColorStop(0, "rgba(16,21,44,0.96)"); gr.addColorStop(1, "rgba(8,10,22,0.98)");
     grads.band = gr;
+    // teinte d'alerte du col (0 → 46 px, mise à l'échelle au dessin) : transparente en haut, colorée sur la ligne
+    gr = g.createLinearGradient(0, 0, 0, 46);
+    gr.addColorStop(0, U.rgba(P.danger, 0)); gr.addColorStop(1, U.rgba(P.danger, 0.3));
+    grads.tintR = gr;
+    gr = g.createLinearGradient(0, 0, 0, 46);
+    gr.addColorStop(0, U.rgba(P.or, 0)); gr.addColorStop(1, U.rgba(P.or, 0.16));
+    grads.tintA = gr;
     return grads;
   }
 
@@ -1805,6 +1832,7 @@
     // bocal
     const alert = st.scene === "AIM" || st.scene === "NIGHT_INTRO" ? BE.Jar.alertLevel(run) : BE.Jar.danger(run) ? 2 : 0;
     const danger = alert === 2;
+    if (st.scene === "AIM" && !st.paused) FX.trackAlert(run, alert); // montée d'alerte : pouls + son (12_fx, 03_audio)
     const lostIds = st.scene === "RUN_LOST" && S.lost ? S.lost.bodies : null;
     const vid = st.scene === "VIDANGE" ? U.easeInCubic(U.clamp(st.sceneT / D.FX.vidange, 0, 1)) : 0;
     const vidLeave = vid && S.vid && S.vid.kept ? S.vid.leave : null; // Insomniaque : seules les petites étoiles tombent

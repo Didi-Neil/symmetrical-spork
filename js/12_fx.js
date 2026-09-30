@@ -47,7 +47,7 @@
   const rings = new U.Pool(32, () => ({ x: 0, y: 0, r0: 0, r1: 0, life: 0, max: 0.25, color: "#fff", w: 2, glow: false }));
   const bolts = new U.Pool(16, () => ({ pts: new Float32Array(18), x1: 0, y1: 0, x2: 0, y2: 0, life: 0, max: 0.25, color: "#ffe14d", jt: 0 }));
   const beams = new U.Pool(8, () => ({ x1: 0, y1: 0, x2: 0, y2: 0, life: 0, max: 0.4, color: "#fff", w: 8 }));
-  const banners = new U.Pool(6, () => ({ x: 0, y: 0, text: "", color: "#fff", size: 20, life: 0, max: 1, sub: "", icon: null, w: -1 }));
+  const banners = new U.Pool(6, () => ({ x: 0, y: 0, ys: 0, text: "", color: "#fff", size: 20, life: 0, max: 1, sub: "", icon: null, w: -1, count: 1, nom: "" }));
   const timers = new U.Pool(64, () => ({ t: 0, fn: null, a: null }));
   FX.pools = { parts, floats, rings, bolts, banners, beams, timers };
 
@@ -168,7 +168,7 @@
   FX.banner = function (text, x, y, color, size, dur, sub, icon, o) {
     const b = banners.spawn();
     b.text = text; b.x = x; b.y = y; b.color = color || "#fff"; b.size = Math.round(size || 20); b.max = b.life = dur || 1;
-    b.sub = sub || ""; b.icon = icon || null; b.w = -1;
+    b.sub = sub || ""; b.icon = icon || null; b.w = -1; b.ys = y; b.count = 1; b.nom = text;
     b.minX = o && o.minX !== undefined ? o.minX : 0; b.maxX = o && o.maxX !== undefined ? o.maxX : D.W; b.kind = (o && o.kind) || "";
     return b;
   };
@@ -290,7 +290,11 @@
     items = beams.items;
     for (let i = 0; i < items.length; i++) { const b = items[i]; if (!b.alive) continue; b.life -= el; if (b.life <= 0) b.alive = false; }
     items = banners.items;
-    for (let i = 0; i < items.length; i++) { const b = items[i]; if (!b.alive) continue; b.life -= rel; if (b.life <= 0) b.alive = false; }
+    for (let i = 0; i < items.length; i++) {
+      const b = items[i]; if (!b.alive) continue;
+      b.life -= rel; if (b.life <= 0) b.alive = false;
+      b.ys += (b.y - b.ys) * Math.min(1, rel * 14); // file de réactions : glisse vers sa nouvelle ligne
+    }
     items = timers.items;
     for (let i = 0; i < items.length; i++) {
       const t = items[i]; if (!t.alive) continue;
@@ -498,7 +502,7 @@
       // bornes : l'écran, et pour les réactions les murs du bocal (jamais sur la jauge de remplissage)
       const lo = Math.max(half, b.minX + b.w / 2), hi = Math.min(D.W - half, b.maxX - b.w / 2);
       const x = lo <= hi ? U.clamp(b.x, lo, hi) : (lo + hi) / 2;
-      const y = b.y - k * 10;
+      const y = b.ys - k * 10;
       // plaque sombre douce : la bannière reste lisible au-dessus des Ombres, badges et étoiles
       {
         const pw = (b.w + 40) * s, ph = (b.size * 1.55 + (b.sub ? 14 : 0)) * s, py = y + (b.sub ? 6 : 0) * s;
@@ -556,6 +560,25 @@
   FX.GOLD_POS = GOLD_POS; FX.GAUGE_POS = GAUGE_POS;
   function fam(c) { return (D.FAMILIES[c] && D.FAMILIES[c].color) || "#eef2ff"; }
   function inGame() { const st = BE.state; return st && st.run && BE.Run && BE.Run.IN_GAME[st.scene]; }
+
+  /**
+   * Alerte du bocal (§4) suivie à la visée : quand le niveau monte (0 → ambre 1 → rouge 2), la ligne s'embrase
+   * (FX.alertT, 11_render) et « alert » part vers l'audio (battement unique en ambre, cœur en rouge). Remis à zéro
+   * à chaque nuit ; une baisse puis une remontée re-signale.
+   */
+  let alertPrev = 0, alertRun = null, alertNight = -1;
+  FX.alertT = -9;
+  FX.trackAlert = function (run, level) {
+    const night = run.lune * 10 + run.nuit;
+    if (run !== alertRun || night !== alertNight) { alertRun = run; alertNight = night; alertPrev = 0; }
+    if (level > alertPrev) {
+      FX.alertT = now();
+      if (level >= 2) FX.dangerT = now();
+      BE.emit("alert", { level });
+      FX.vibrate(level >= 2 ? [30, 60, 30] : 15);
+    }
+    alertPrev = level;
+  };
 
   const STACK = { stack: true };
   BE.on("peg", (e) => {
@@ -646,17 +669,40 @@
     }
     if (e.pure) FX.float(e.x, e.y + 8, "PURE", "#ffffff", 9, { life: 0.65, rise: 6, weight: 900 });
   });
-  BE.on("reaction", (e) => {
-    const R = D.REACTIONS[e.id];
-    // réactions en chaîne : chaque bannière encore lisible repousse la nouvelle d'une ligne vers le haut
-    let y = Math.max(372, e.y - 34);
-    for (let guard = 0; guard < 6; guard++) {
-      let hit = false;
-      for (const q of banners.items) if (q.alive && q.kind === "reaction" && q.life > 0.2 && Math.abs(q.y - y) < 23) { y = q.y - 24; hit = true; }
-      if (!hit) break;
+  /**
+   * Réactions en chaîne (bocal étroit) : une file de 3 lignes au plus, alignée sur la première bannière. La même
+   * réaction encore lisible se fusionne (« VAPEUR ×2 ») ; une nouvelle entre en bas et pousse les autres d'une ligne ;
+   * la 4e chasse la plus ancienne (fondu rapide).
+   */
+  const CHAIN_GAP = 30, CHAIN_MAX = 3, CHAIN_ALL = [];
+  function reactionBanner(e) {
+    const A = CHAIN_ALL; A.length = 0; // toutes les bannières de réaction vivantes (y compris celles qui s'effacent)
+    let low = null;
+    for (const q of banners.items) {
+      if (!q.alive || q.kind !== "reaction") continue;
+      if (q.life > 0.25) {
+        if (q.icon === e.id) { q.count++; q.text = q.nom + " ×" + q.count; q.w = -1; q.life = q.max; return q; } // fusion : rejaillit
+        if (!low || q.y > low.y) low = q;
+      }
+      A.push(q);
     }
     const J = BE.state && BE.state.run && BE.state.run.jar;
-    FX.banner(e.nom.toUpperCase(), e.x, y, e.color, 17, 1.2, "", e.id, { kind: "reaction", minX: J ? J.wallL - 8 : 0, maxX: J ? J.wallR - 4 : D.W });
+    let x = e.x, y = Math.max(372, e.y - 34);
+    if (low) { x = low.x; y = low.y; } // la file garde sa colonne et sa ligne de base (la plus basse bannière lisible)
+    if (A.length) {
+      A.sort((a, b) => b.y - a.y); // du bas vers le haut
+      let line = 0;
+      for (let i = 0; i < A.length; i++) {
+        if (A[i].y < y - CHAIN_GAP * CHAIN_MAX) continue; // déjà loin au-dessus
+        A[i].y -= CHAIN_GAP; line++;
+        if (line >= CHAIN_MAX) A[i].life = Math.min(A[i].life, 0.22); // sortie de la file : fondu rapide
+      }
+    }
+    return FX.banner(e.nom.toUpperCase(), x, y, e.color, 16, 1.3, "", e.id, { kind: "reaction", minX: J ? J.wallL - 8 : 0, maxX: J ? J.wallR - 4 : D.W });
+  }
+  BE.on("reaction", (e) => {
+    const R = D.REACTIONS[e.id];
+    const y = reactionBanner(e).y;
     FX.beam(e.x, e.y, e.x, y + 10, e.color, 6, 0.45);
     FX.ring(e.x, e.y, 10, 72, e.color, 0.45, 3, true);
     FX.burst(e.x, e.y, 14, { speed: 170, color: e.color, life: 0.6, size: 2, glow: true });

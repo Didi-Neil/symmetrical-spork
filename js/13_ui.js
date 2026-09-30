@@ -656,9 +656,13 @@
       // l'indice (y = liveY + 46 ≈ 398) gênerait une étoile qui entre dans le col du bocal, au-dessus de l'horizon
       const top = BE.Jar.topY && BE.Jar.topY(run);
       const high = top !== null && top !== undefined && top < BE.Run.horizon(run) + 12;
-      // l'accélération automatique (×2 à 2 s, ×3 à 3,5 s) fait déjà le travail : l'indice n'apparaît que pour un tir
-      // encore long après le ×3 automatique (maintenir passe alors à ×4)
-      if (BE.Run.RESOLVING[sc] && st.play.shot && st.play.shot.t > D.PHYS.speed.auto3 + 0.8 && !BE.Input.isHeld() && !st.meta.flags.usedHold && !high) hint = BE.Input.isTouch() ? "Maintiens le doigt : encore plus vite" : "Maintiens F : encore plus vite";
+      // indice calé sur l'accélération automatique (§5.8, D.PHYS.speed) : juste avant qu'elle ne prenne le relais
+      // (« pour accélérer »), puis pour un tir encore long après le ×3 automatique (maintenir passe alors à ×4)
+      const SP = D.PHYS.speed, T = st.play.shot ? st.play.shot.t : 0;
+      const early = T > Math.max(1, SP.auto2 - 1.5) && T < SP.auto2, late = T > SP.auto3 + 0.8;
+      if (BE.Run.RESOLVING[sc] && st.play.shot && (early || late) && !BE.Input.isHeld() && !st.meta.flags.usedHold && !high) {
+        hint = (BE.Input.isTouch() ? "Maintiens le doigt" : "Maintiens F") + (late ? " : encore plus vite" : " pour accélérer");
+      }
       else if (sc === "COUNT" && run.runStats.shots <= 2 && !high) hint = BE.Input.isTouch() ? "Touche pour passer" : "Espace pour passer";
       if (hint) {
         const fs = 11 * ts();

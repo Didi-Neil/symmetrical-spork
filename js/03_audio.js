@@ -225,6 +225,8 @@
       noise(1.2, "lowpass", 6000, 300, 0.7, 0.25, 0.32, 0.01);
     },
     heart() { tone("sine", 60, 56, 0.08, 0.32); tone("sine", 60, 56, 0.08, 0.26, 0.18); },
+    // alerte ambre (§4) : un seul battement sourd + un fil de verre qui vibre
+    warn() { tone("sine", 62, 56, 0.09, 0.26); tone("triangle", 1244.5, 1175, 0.22, 0.03, 0.02); },
     overflow() { toneF("sawtooth", 400, 80, 0.6, 0.2, 0, 0.005, "lowpass", 1400, 2); tone("sine", 80, 40, 0.6, 0.2); },
     reel() { noise(0.01, "highpass", 3000, 3000, 1, 0.2); },
     ding() { tone("sine", 1568, 1568, 0.25, 0.15); },
@@ -263,7 +265,7 @@
   };
   // durées minimales entre deux déclenchements (s) — évite la bouillie à ×4
   const LIMIT = { wall: 0.04, land: 0.035, hit: 0.03, tick: 0.02, coin: 0.05, tic: 0.035, burn: 0.08, freeze: 0.06, evaporate: 0.08,
-    spawn: 0.12, fall: 0.06, heart: 0.5, stone: 0.04, bolt: 0.05, kill: 0.04, launch: 0.05, armor: 0.1, explosion: 0.06, ui: 0.03 };
+    spawn: 0.12, fall: 0.06, heart: 0.5, warn: 1.5, stone: 0.04, bolt: 0.05, kill: 0.04, launch: 0.05, armor: 0.1, explosion: 0.06, ui: 0.03 };
   // envoi vers la réverbération
   const WET = { quota: 0.35, peg: 0.25, reaction: 0.45, relic: 0.3, total: 0.3, bigbang: 0.5, kaching: 0.35, bonusShot: 0.4, victory: 0.45, lose: 0.4,
     nightStart: 0.5, candle: 0.4, freeze: 0.3, merge: 0.15, final: 0.35, ding: 0.3, grow: 0.2 };
@@ -419,6 +421,7 @@
   BE.on("bossKill", () => A.duck(0.6, 1.2));
   BE.on("merge", (d) => { A.play("merge", d); if (d.size >= 5) A.duck(0.35, 0.5); });
   BE.on("reaction", (d) => { A.play("reaction", { x: d.x, f: (BE.DATA.REACTIONS[d.id] || EMPTY).freq || 660 }); A.duck(0.3, 0.4); });
+  BE.on("alert", (d) => A.play(d.level >= 2 ? "heart" : "warn")); // montée d'alerte à la visée (12_fx)
   BE.on("burnTick", (d) => A.play("burn", d));
   BE.on("burn", (d) => A.play("burn", d));
   BE.on("absorb", (d) => A.play("absorb", d));
