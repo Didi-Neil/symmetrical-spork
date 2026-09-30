@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Bocal d'Étoiles</title>
+<style>
+  :root {
+    --bg0: #070a14; --bg: #0b0f1e; --panel: #121832; --line: #2b3560; --text: #eef2ff; --dim: #8a93b8;
+    --eclat: #4fb3ff; --mult: #ff4d5e; --or: #ffd166; --frag: #c7a6ff;
+  }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg0); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  #game {
+    position: absolute; display: block; touch-action: none; user-select: none; -webkit-user-select: none;
+    overscroll-behavior: none; outline: none; background: var(--bg);
+  }
+  #boot {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: 14px; letter-spacing: 2px; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" tabindex="0" aria-label="Bocal d'Étoiles"></canvas>
+<div id="boot">BOCAL D'ÉTOILES…</div>
+<script src="js/00_core.js"></script>
+<script src="js/01_data.js"></script>
+<script src="js/02_save.js"></script>
+<script src="js/03_audio.js"></script>
+<script src="js/04_input.js"></script>
+<script src="js/05_physics.js"></script>
+<script src="js/06_firmament.js"></script>
+<script src="js/07_jar.js"></script>
+<script src="js/08_scoring.js"></script>
+<script src="js/09_run.js"></script>
+<script src="js/10_shop.js"></script>
+<script src="js/11_render.js"></script>
+<script src="js/12_fx.js"></script>
+<script src="js/13_ui.js"></script>
+<script src="js/14_meta.js"></script>
+<script src="js/15_debug.js"></script>
+<script src="js/99_main.js"></script>
+</body>
+</html>

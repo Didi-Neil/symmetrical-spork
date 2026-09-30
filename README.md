@@ -5,3 +5,35 @@ Jeu mobile (web, portrait) conçu à partir des qualités des jeux mobiles indé
 - `docs/JEUX_ETUDIES.md` : les 47 jeux étudiés
 - `docs/PILIERS.md` : les piliers de design et les mécaniques qu'ils ont en commun
 - `docs/GDD.md` : le document de design complet, qui fait référence
+
+## Lancer le jeu
+
+- **Le plus simple :** ouvre `index.html` dans un navigateur récent (Chrome, Firefox, Safari, Edge). Le jeu fonctionne
+  directement depuis le disque (`file://`), hors ligne, sans installation ni dépendance.
+- **Sur téléphone ou pour partager :** sers le dossier avec n'importe quel serveur statique, par exemple
+  `python3 -m http.server 8000` (ou `npx serve .`), puis ouvre `http://<adresse-de-la-machine>:8000` sur le téléphone.
+  Le jeu est pensé pour le mode portrait, joué d'un seul pouce.
+- La progression (Fragments, salles, défis, run en cours) est enregistrée dans le navigateur (`localStorage`). En
+  navigation privée stricte, le jeu reste jouable mais rien n'est sauvegardé.
+
+## Comment jouer
+
+1. **Vise et lance.** Pose le doigt (ou maintiens le clic), glisse pour orienter le Phare, relâche pour lancer
+   l'étoile. Remonte le doigt vers la barre du haut pour annuler. Au clavier : ←/→ pour viser, Espace pour lancer.
+2. **Rebondis.** Chaque clou touché donne de l'**Éclat** (bleu). Chaque Ombre touchée perd autant de PV que la taille de
+   l'étoile et donne +3 Éclat.
+3. **Fusionne.** L'étoile tombe dans le bocal. Deux étoiles de même taille fusionnent et rapportent du **Mult** (rouge) ;
+   deux couleurs différentes déclenchent une réaction (Vapeur, Plasma, Tempête…).
+4. **Brille.** Au décompte, tes reliques s'activent de gauche à droite, puis Lumière = Éclat × Mult s'ajoute à la
+   jauge. Atteins le **quota** de la nuit avant d'avoir épuisé tes 6 tirs.
+5. **Attention au bocal.** Il reste plein pendant les 3 nuits d'une Lune. Si un objet au repos dépasse la ligne
+   d'horizon, c'est le **Débordement** (la Bougie te sauve une fois). Les Ombres descendent quand leur compteur arrive
+   à 0 ; en bas, elles tombent dans le bocal en Pierres Noires.
+6. **À l'Aube** (après chaque nuit gagnée), dépense ton or : reliques, étoiles, clous spéciaux, gravures, paquet
+   Constellation. Tape une relique pour voir son effet chiffré ; glisse-les pour changer leur ordre.
+7. **Gagne** en passant la Nuit du Boss de la Lune 5 (L'Éclipse). Tes Fragments ◇ allument les salles de
+   l'Observatoire, qui ajoutent du contenu aux runs suivants.
+
+Astuces : maintiens le doigt pendant un tir pour l'accélérer, touche l'écran pendant le décompte pour le passer, touche
+« SUIV. » pour échanger l'étoile courante avec la suivante (1 fois par nuit), et le Sac pour voir ce qu'il reste dans
+la pioche.
