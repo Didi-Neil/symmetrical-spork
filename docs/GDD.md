@@ -213,7 +213,7 @@ y=640  └───────────────────────�
 - **Treillis de clous :** coins entre les cellules, x = **72, 126, 180, 234, 288** (colonnes c0 à c4) et y = **143, 189, 235, 281** (rangées r0 à r3), soit 20 positions. Rayon d'un clou : **5**. La distance entre un centre d'Ombre et un coin est de 35,5 : il n'y a jamais de chevauchement.
 - **Emplacements de clous spéciaux** (6, fixes, en losange) : A(r0,c1), B(r0,c3), C(r1,c2), D(r2,c1), E(r2,c3), F(r3,c2). Paires adjacentes : A–C, B–C, C–D, C–E, D–F, E–F.
 - **Plafond :** y = 44 (restitution 0,85).
-- **Ligne d'horizon :** y = 452. Elle vaut 476 avec « Verre soufflé » et 468 à l'Éclipse 4 (les deux se cumulent : 492). Elle ne descend **jamais sous y = 492** (= 616 − Ø 116 d'un Trou Noir − 8 px) : un Trou Noir seul au fond reste toujours sous la ligne.
+- **Ligne d'horizon :** y = 452. Elle vaut 476 avec « Verre soufflé » et 468 à l'Éclipse 4 (les deux se cumulent : 492). Elle ne descend **jamais sous y = 492** : la plus grosse étoile posée seule au fond (Nova, Ø 100 ; le Trou Noir effondré ne fait que Ø 80, §5.2) garde au moins 8 px de marge sous la ligne (v1.1b : 492 = 616 − Ø 116 de l'ancien Trou Noir − 8 px).
 - **Surface utile du bocal :** 200 × 164 = **32 800 px²**. **Capacité** = surface utile (murs courants, horizon courant) × **0,6** (compacité mesurée d'un tas d'étoiles au repos : le bocal déborde vers 55–65 % de sa surface).
 - **Remplissage (jauge)** = **max(Σ aires / capacité, hauteur du tas)**, où hauteur du tas = (fond − haut du plus haut corps posé) / (fond − horizon). Le terme « hauteur » vaut exactement 100 % quand le tas touche la ligne : la jauge ne peut plus afficher 71 % pour un tas de grosses étoiles déjà au ras de l'horizon, ni 77 % pour deux grosses étoiles posées au fond d'un bocal à moitié vide sans que la hauteur le confirme (v1.1b). Une étoile qui tombe encore (> 60 px/s) ne compte pas dans la hauteur. Le terme surface est plafonné à 99 % : un tas très compact (compacité > 0,6) ne peut pas afficher 100 % sans toucher la ligne, si bien que **100 % = Débordement**, quel que soit l'horizon (Verre soufflé, Éclipse 4 : capacité et hauteur utile sont calculées sous l'horizon courant). Affichage : jauge verticale à droite du bocal (du fond à l'horizon), animée en douceur ; or ≥ 60 %, rouge ≥ 85 % ou en danger ; pendant la Vidange elle descend vers ce qui reste au bocal. C'est **cette** valeur que lisent Balance, Équilibre et le défi D02.
 - **Alerte à deux niveaux (visée) :** **ambre** (ligne et lueur ambrées, jauge au moins or, sans son) dès que l'étoile courante, posée sur le haut du tas, dépasserait la ligne, soit un corps au repos à moins de max(40 px, diamètre au bocal de l'étoile courante) de l'horizon ; **rouge** (ligne rouge qui pulse, verre rosé, battement de cœur, vignette) à moins de 16 px, comme en v1.0.
@@ -253,10 +253,10 @@ Un emplacement spécial qui contient un clou spécial est toujours présent, que
 | 4 | Soleil | 32 | 38 | 4 536 | +3 | 🌟 |
 | 5 | Géante | 40 | 46 | 6 648 | +5 | 🟠 |
 | 6 | Nova | 50 | 50 | 7 854 | +8 | 💥 |
-| 7 | Trou Noir | 58 | 58 | 10 568 | +13 | 🕳️ |
-| 7+7 | **Big Bang** | — | — | — | **×10 final** | 🌌 |
+| 7 | Trou Noir (effondré) | — (jamais lancé) | 40 (naît à 58, §5.5) | 5 027 | +13 | 🕳️ |
+| 7+6 ou 7+7 | **Big Bang** | — | — | — | **×10 final** | 🌌 |
 
-- **Deux rayons** (amendement « géométrie du bocal ») : le Firmament est loin, le verre du bocal grossit. En vol, l'étoile garde son petit rayon (le treillis de clous, écart 44 px, reste traversable) ; en entrant dans le bocal elle prend son **rayon au bocal** (animation de 0,16 s). La courbe du bocal est aplatie (×1,2 par taille au lieu de ×1,3) : une fusion libère **20 à 30 %** de place, et les petites étoiles pèsent vraiment dans le bocal. **v1.1b** : le haut de la courbe est encore aplati (Nova 50, Trou Noir 58 au lieu de 55 / 66) ; avec 55 / 66, une Nova et une Géante ou un Trou Noir et un Astre ne tenaient pas côte à côte sous l'horizon, et le Trou Noir n'apparaissait dans aucun des 1 900 runs mesurés (Big Bang, D08, Singularité et l'archétype Tour de Babel devenaient du contenu mort). Désormais Nova + Géante (192 px) et Trou Noir + Astre (178 px) tiennent sur le fond, et un Trou Noir seul reste sous l'horizon le plus bas (§4).
+- **Deux rayons** (amendement « géométrie du bocal ») : le Firmament est loin, le verre du bocal grossit. En vol, l'étoile garde son petit rayon (le treillis de clous, écart 44 px, reste traversable) ; en entrant dans le bocal elle prend son **rayon au bocal** (animation de 0,16 s). La courbe du bocal est aplatie (×1,2 par taille au lieu de ×1,3) : une fusion libère **20 à 30 %** de place, et les petites étoiles pèsent vraiment dans le bocal. **v1.1b** : le haut de la courbe est encore aplati (Nova 50, Trou Noir 58 au lieu de 55 / 66) ; avec 55 / 66, une Nova et une Géante ou un Trou Noir et un Astre ne tenaient pas côte à côte sous l'horizon, et le Trou Noir n'apparaissait dans aucun des 1 900 runs mesurés (Big Bang, D08, Singularité et l'archétype Tour de Babel devenaient du contenu mort). Désormais Nova + Géante (192 px) et Trou Noir + Astre tiennent sur le fond, et un Trou Noir seul reste sous l'horizon le plus bas (§4). **v1.1c — Trou Noir effondré** : même à 58 px, le Big Bang restait hors d'atteinte (0 % des runs, Insomniaque comprise) ; le Trou Noir **s'effondre** désormais en un disque compact de **rayon 40** (Ø 80), dense (masse × 2,1, soit celle d'un disque de 58 px : il coule au fond et ne se laisse pas soulever). Il reste le plus gros Mult de fusion (+13) mais ne coûte plus que 5 027 px² au bocal, moins qu'une Géante : c'est la récompense d'avoir tenu deux Novas sous la ligne, et il laisse la place de préparer le Big Bang (§5.5). La Nova (Ø 100) est donc la plus grosse étoile du bocal.
 
 - Taille maximale **lancée** : 5 (au-delà, les bonus de taille sont perdus).
 - Dégâts aux Ombres = **taille** (+ modificateurs).
@@ -303,11 +303,12 @@ Broadphase : O(n²), suffisant jusqu'à 60 corps. Le plafond de sécurité est d
 
 ### 5.5 Fusion
 
-- **Condition :** deux étoiles (pas des Pierres), de même taille s < 7, avec `dist ≤ r1 + r2 + 1`, toutes deux âgées de ≥ 2 pas depuis leur création, et aucune des deux n'ayant fusionné dans ce pas.
+- **Condition :** deux étoiles (pas des Pierres), de même taille s < 7 (ou une paire Big Bang, ci-dessous), avec `dist ≤ r1 + r2 + 1`, toutes deux âgées de ≥ 2 pas depuis leur création, et aucune des deux n'ayant fusionné dans ce pas.
 - **Ordre de résolution :** paires triées par (min id, max id), et une seule fusion par corps et par pas.
 - **Résultat :** nouvelle étoile de taille s+1 placée au barycentre pondéré par la masse. `v = (v1 + v2)/2 × 0,5`. Elle reçoit un nouvel `id`. Les chevauchements sont résolus par le solveur de position.
 - **Couleur :** si les deux étoiles ont la même couleur, la fusion est **pure** (Mult de la fusion ×1,5, arrondi au 0,5 supérieur). Si les couleurs diffèrent, la **réaction** de la paire se déclenche et l'étoile obtenue prend la couleur principale de l'étoile au plus petit `id` (la plus ancienne), avec un anneau bicolore visuel pendant 1 s.
-- **Trou Noir + Trou Noir = Big Bang :** tous les corps du bocal (étoiles et Pierres) disparaissent. On ajoute **+Éclat = somme des tailles disparues** et on applique un **×10 final** au tir.
+- **Effondrement (v1.1c) :** Nova + Nova donne un Trou Noir qui naît au diamètre de la Nova (58 px à l'écran) et s'effondre en 0,3 s à son rayon au bocal de 40 px (anneau violet qui se referme, « EFFONDREMENT »). Côté physique, il a son rayon de 40 px dès sa création (masse × 2,1).
+- **Trou Noir + Nova (ou Trou Noir) = Big Bang (v1.1c) :** un Trou Noir qui touche une Nova ou un autre Trou Noir l'avale : tous les corps du bocal (étoiles et Pierres) disparaissent. On ajoute **+Éclat = somme des tailles disparues** et on applique un **×10 final** au tir. Jusqu'à la v1.1b, seuls deux Trous Noirs déclenchaient le Big Bang : il fallait tenir un Trou Noir et deux Novas à la fois sous la ligne, ce que le bocal de 200 px ne permet presque jamais. Il faut désormais trois Novas en tout (deux pour le Trou Noir, une troisième qui le touche). La Forgeronne peut déclencher un Big Bang entre deux couleurs : ce n'est pas une fusion (ni pureté ni réaction). Réglage : `DATA.BIGBANG.partner` (6 ; 7 = règle v1.1b).
 - **Pierre Noire brisée :** à chaque fusion, toute Pierre dont `dist(centre nouvelle étoile, pierre) ≤ r_new + r_pierre + 4` est détruite, ce qui donne **+2 Mult** par Pierre (en plus des reliques).
 - **Fusions orphelines :** une fusion qui se produit pendant la DESCENTE (Pierre qui tombe, rétrécissement de L'Étau) produit son Mult dans la **réserve**, ajoutée au Mult de base du tir suivant (affichée « +2 en réserve » en rouge sous le Phare).
 
@@ -339,8 +340,9 @@ La Forgeronne ne peut pas faire de fusion mixte : deux étoiles de couleurs diff
 ### 5.8 Durée d'un tir, accélérations, garde-fous
 
 - **Temps de simulation écoulé depuis le lâcher (T) :**
-  - T ≥ 2 s : vitesse ×2 (automatique).
-  - T ≥ 3,5 s : vitesse ×3.
+  - **Pendant le vol** (au moins une étoile dans le Firmament) : T ≥ 4 s : vitesse ×2 (automatique) ; T ≥ 7 s : vitesse ×3. La traversée des clous, le cœur « Peglin » du tir, se joue à ×1.
+  - **Une fois toutes les étoiles au bocal** (repos, tourelles, descente) : T ≥ 2 s : ×2 ; T ≥ 3,5 s : ×3 (l'attente du repos reste courte).
+  - (v1.1c ; v1.1 : ×2 dès 2 s et ×3 dès 3,5 s dans toutes les phases, ce qui accélérait le vol pendant qu'on regardait l'étoile rebondir.)
   - T ≥ 14 s : les étoiles en vol ignorent clous et Ombres et tombent directement.
 - **Doigt ou F maintenu :** ×3. Le cumul avec l'accélération automatique est plafonné à ×4.
 - **Accélération :** exécuter k pas de 1/120 par tick logique (k = 2, 3 ou 4). Maximum de 8 pas par frame de rendu, et le surplus est reporté.

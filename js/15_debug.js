@@ -537,8 +537,9 @@
       T("Remplissage fin de Nuit du Boss", S.bossFill, pctTxt(S.bossFill), "55 à 75 %", 0.55, 0.75, JAR_NA),
       T("Or moyen dépensé par run", S.goldSpent, decTxt(S.goldSpent, 1), "90 à 130", 90, 130),
       T("Durée d'un run gagné (min, estim.)", S.wonMinutes, decTxt(S.wonMinutes, 1), "10 à 14", 10, 14),
-      // Big Bang de l'Insomniaque : suspendu en v1.1 (le bocal de 200 px ne loge pas deux Trous Noirs), mesuré mais N/A
-      insomniaque ? T("Big Bang (Insomniaque)", S.bigBangRate, pctTxt(S.bigBangRate), "10 à 20 %", 0.10, 0.20, true)
+      // Big Bang de l'Insomniaque : suspendu en v1.1 / v1.1b (bocal étroit), rétabli en v1.1c (Trou Noir effondré,
+      // Trou Noir + Nova = Big Bang)
+      insomniaque ? T("Big Bang (Insomniaque)", S.bigBangRate, pctTxt(S.bigBangRate), "10 à 20 %", 0.10, 0.20)
         : T("Big Bang", S.bigBangRate, pctTxt(S.bigBangRate), "< 3 %", 0, 0.0299),
     ];
     return S;
