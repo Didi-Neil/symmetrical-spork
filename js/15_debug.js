@@ -182,9 +182,9 @@
     for (let i = 0; i < n; i++) out.push(U.clamp(a0 + i * step + (i > 0 && i < n - 1 ? jit : 0), a0, a1));
     return out;
   }
-  function bestOf(run, rng, scoreFn, withScore) {
+  function bestOf(run, rng, scoreFn, withScore, n) {
     let best = null, bestS = -Infinity;
-    for (const a of candidates(rng, 24)) {
+    for (const a of candidates(rng, n || 24)) {
       const r = trial(run, a);
       const s = scoreFn(r);
       if (s > bestS) { bestS = s; best = a; }
@@ -200,6 +200,12 @@
     random: (run, rng) => D.GEOM.aimMin + rng() * (D.GEOM.aimMax - D.GEOM.aimMin),
     greedy: (run, rng) => bestOf(run, rng, SCORE_FN.greedy),
     safe: (run, rng) => bestOf(run, rng, SCORE_FN.safe),
+    /** « Doigt humain » : meilleur de 12 angles, tiré avec une erreur gaussienne σ = 1,5°, sans échange (§13.3). */
+    noisy: (run, rng) => {
+      const a = bestOf(run, rng, SCORE_FN.greedy, false, 12);
+      const u = Math.max(1e-9, rng()), v = rng();
+      return U.clamp(a + 1.5 * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v), D.GEOM.aimMin, D.GEOM.aimMax);
+    },
   };
   /**
    * Échange (§3.1, §6.6) pour les bots greedy / safe : s'il reste un échange (et pas de Voile), on évalue aussi
@@ -313,9 +319,10 @@
         if (s.play.count.ctx.bigBang) rec.mergeSizes[8] = (rec.mergeSizes[8] || 0) + 1;
         rec.estTime += s.play.count.endAt;
       }
-      if (to === "NIGHT_WON" && night) { night.won = true; night.shots = run.shotIndex; night.fill = BE.Jar.fill(run); night.total = run.total; rec.nightsWon++; rec.estTime += HUMAN.nightWon; }
+      // remplissage au moment où la nuit est gagnée (avant l'évaporation du trop-plein) : jauge + part surfacique
+      if (to === "NIGHT_WON" && night) { night.won = true; night.shots = run.shotIndex; night.fill = s.play.won && s.play.won.fill !== undefined ? s.play.won.fill : BE.Jar.fill(run); night.area = s.play.won && s.play.won.area !== undefined ? s.play.won.area : BE.Jar.areaFill(run); night.total = run.total; rec.nightsWon++; rec.estTime += HUMAN.nightWon; }
       if (to === "VIDANGE") rec.estTime += HUMAN.vidange;
-      if (to === "RUN_LOST" && night) { night.won = false; night.shots = run.shotIndex; night.fill = BE.Jar.fill(run); night.total = run.total; }
+      if (to === "RUN_LOST" && night) { night.won = false; night.shots = run.shotIndex; night.fill = BE.Jar.fill(run); night.area = BE.Jar.areaFill(run); night.total = run.total; }
     };
     this.tick = (s, dt) => {
       rec.simTime += dt;
@@ -395,7 +402,7 @@
 
   function normOpts(opts) {
     opts = Object.assign({ runs: 20, policy: "greedy", gardien: "veilleuse", eclipse: 0, shop: "default", seed: "SIM" }, opts || {});
-    if (!Dbg.POLICIES[opts.policy]) throw new Error("politique inconnue : " + opts.policy + " (random, greedy, safe)");
+    if (!Dbg.POLICIES[opts.policy]) throw new Error("politique inconnue : " + opts.policy + " (random, greedy, safe, noisy)");
     if (!Dbg.SHOP_POLICIES[opts.shop]) throw new Error("politique de boutique inconnue : " + opts.shop);
     if (!D.GARDIEN_BY_ID[opts.gardien]) throw new Error("Gardien inconnu : " + opts.gardien);
     return opts;
@@ -488,8 +495,12 @@
     const cleared = (L) => (ok.length ? ok.filter((r) => r.won || r.lune > L).length / ok.length : NaN);
     const allShotsWon = [];
     for (const r of ok) for (const nt of r.nights) if (nt.won) allShotsWon.push(nt.shots);
-    const bossFills = [];
-    for (const r of ok) for (const nt of r.nights) if (nt.nuit === 2) bossFills.push(nt.fill || 0);
+    const bossFills = [], bossFillsWon = [], bossArea = [];
+    for (const r of ok) for (const nt of r.nights) if (nt.nuit === 2) {
+      bossFills.push(nt.fill || 0);
+      if (nt.won) bossFillsWon.push(nt.fill || 0);
+      if (nt.area !== undefined) bossArea.push(nt.area);
+    }
     const causes = {};
     for (const r of lost) causes[r.cause] = (causes[r.cause] || 0) + 1;
     const light = {};
@@ -508,16 +519,15 @@
       n, errors: n - ok.length, wins: won.length, winRate: ok.length ? won.length / ok.length : NaN,
       lune1: cleared(1), lune2: cleared(2), lune3: cleared(3), lune4: cleared(4),
       shotsPerWonNight: avg(allShotsWon), causes, overflowShare: lost.length ? (causes.overflow || 0) / lost.length : NaN,
-      bossFill: avg(bossFills), goldSpent: avg(ok.map((r) => r.goldSpent || 0)), goldEarned: avg(ok.map((r) => r.goldEarned || 0)),
+      bossFill: avg(bossFills), bossFillWon: avg(bossFillsWon), bossAreaFill: avg(bossArea), goldSpent: avg(ok.map((r) => r.goldSpent || 0)), goldEarned: avg(ok.map((r) => r.goldEarned || 0)),
       goldEnd: avg(ok.map((r) => r.goldEnd || 0)), wonMinutes: avg(won.map((r) => r.estTime / 60)), allMinutes: avg(ok.map((r) => r.estTime / 60)),
       bigBangRate: ok.length ? ok.filter((r) => r.bigBang).length / ok.length : NaN, byNight,
       lightPerShot: Object.keys(light).sort((a, b) => a - b).map((L) => ({ lune: +L, avg: light[L].sum / light[L].shots, shots: light[L].shots })),
       reactions, mergeSizes: sizes, dominant, shotsPerRun: avg(ok.map((r) => r.shots)),
     };
     const T = (label, v, txt, target, lo, hi, na) => ({ label, value: v, txt, target, ok: isFinite(v) && v >= lo && v <= hi, na: !!na });
-    // Cibles hors d'atteinte avec la géométrie actuelle du bocal (mesuré : le bocal déborde vers 51–62 % de
-    // remplissage, une Lune n'apporte que 10–14 étoiles) : mesurées mais marquées N/A (docs/ARCHITECTURE.md §16.3).
-    const JAR_NA = true;
+    // Les cibles du bocal comptent depuis la géométrie « entonnoir » (bocal 200 px, rayons du bocal, capacité = surface × 0,6).
+    const JAR_NA = false;
     S.targets = [
       T("Réussite Lune 1 (3 nuits)", S.lune1, pctTxt(S.lune1), "≥ 97 %", 0.97, 1),
       T("Réussite Lune 3", S.lune3, pctTxt(S.lune3), "55 à 70 %", 0.55, 0.70),
@@ -527,7 +537,8 @@
       T("Remplissage fin de Nuit du Boss", S.bossFill, pctTxt(S.bossFill), "55 à 75 %", 0.55, 0.75, JAR_NA),
       T("Or moyen dépensé par run", S.goldSpent, decTxt(S.goldSpent, 1), "90 à 130", 90, 130),
       T("Durée d'un run gagné (min, estim.)", S.wonMinutes, decTxt(S.wonMinutes, 1), "10 à 14", 10, 14),
-      insomniaque ? T("Big Bang (Insomniaque)", S.bigBangRate, pctTxt(S.bigBangRate), "10 à 20 %", 0.10, 0.20, JAR_NA)
+      // Big Bang de l'Insomniaque : suspendu en v1.1 (le bocal de 200 px ne loge pas deux Trous Noirs), mesuré mais N/A
+      insomniaque ? T("Big Bang (Insomniaque)", S.bigBangRate, pctTxt(S.bigBangRate), "10 à 20 %", 0.10, 0.20, true)
         : T("Big Bang", S.bigBangRate, pctTxt(S.bigBangRate), "< 3 %", 0, 0.0299),
     ];
     return S;
@@ -553,6 +564,8 @@
     L.push("");
     const causes = Object.keys(S.causes).map((k) => k + " " + S.causes[k]).join(", ") || "aucune";
     L.push("Défaites : " + causes + " · victoires " + S.wins + "/" + S.n);
+    L.push("Remplissage Nuit du Boss : jauge " + pctTxt(S.bossFill) + " (nuits gagnées seules " + pctTxt(S.bossFillWon) + ") · part surfacique " +
+      pctTxt(S.bossAreaFill) + " de la capacité = " + pctTxt(S.bossAreaFill * D.GEOM.packing) + " de la surface brute");
     L.push("Or : gagné " + decTxt(S.goldEarned) + " · dépensé " + decTxt(S.goldSpent) + " · restant " + decTxt(S.goldEnd) + " (moyennes par run)");
     L.push("Lumière / tir par Lune : " + S.lightPerShot.map((x) => "L" + x.lune + " " + U.fmt(Math.round(x.avg)).replace(/ /g, " ")).join(" · "));
     const rs = Object.keys(S.reactions).sort((a, b) => S.reactions[b] - S.reactions[a]);
@@ -645,9 +658,9 @@
     eq(r.steps.map((s) => s.src).join(","), "base,R05,bigbang"); eq(r.lumiere, 300);
   });
   test("Score", "Lumière = ⌊Éclat × Mult⌋ (7 × 1,5 = 10)", () => eq(L(ctxOf({ baseEclat: 7, baseMult: 1.5 })), 10));
-  test("Score", "relique sans effet : pas d'étape (Chandelle après contact, Balance à 40 %)", () => {
-    const r = BE.Score.compute(ctxOf({ touchedShadow: true, jarFill: 0.4 }), ["R04", "R14"]);
-    eq(r.steps.length, 1); eq(L(ctxOf({ jarFill: 0.39 }), ["R14"]), 20);
+  test("Score", "relique sans effet : pas d'étape (Chandelle après contact, Balance à 50 %)", () => {
+    const r = BE.Score.compute(ctxOf({ touchedShadow: true, jarFill: 0.5 }), ["R04", "R14"]);
+    eq(r.steps.length, 1); eq(L(ctxOf({ jarFill: 0.49 }), ["R14"]), 20);
   });
   test("Score", "+Éclat (Loupe : 3 contacts → +6) et compute pur (ctx inchangé, même sortie)", () => {
     const c = ctxOf({ shadowHits: 3, merges: [{ size: 3, pure: true, colors: ["braise", "braise"], reaction: null, mult: 3, alch: 1.5 }] });
@@ -723,9 +736,9 @@
   });
 
   // ---------------------------------------------------------------- 4. économie
-  function nightReward(opts, gold, shotsLeft) {
+  function nightReward(opts, gold, shotsLeft, grace) {
     return withRun(opts, (run, st) => {
-      run.gold = gold; run.shotsLeft = shotsLeft; run.total = run.quota;
+      run.gold = gold; run.shotsLeft = shotsLeft; run.graceShots = grace || 0; run.total = run.quota;
       BE.Run.go("NIGHT_WON");
       advance(st, (s) => s.play.won && s.play.won.rewarded, 2000);
       return { r: run.lastReward, gold: run.gold };
@@ -734,6 +747,15 @@
   test("Économie", "intérêts calculés AVANT la récompense (24 or → +4, pas +5)", () => {
     const o = nightReward({ seed: "ECO-1" }, 24, 2);
     eq(o.r.interest, 4); eq(o.r.night, 3); eq(o.r.shots, 2); eq(o.gold, 24 + 4 + 3 + 2);
+  });
+  test("Économie", "Lune 1 : +2 tirs d'apprentissage, inutilisés ils ne rapportent pas d'or", () => {
+    withRun({ seed: "ECO-G" }, (run) => {
+      eq(run.lune, 1); eq(run.graceShots, D.ECO.lune1Grace); eq(run.shotsLeft, run.rules.shots + D.ECO.lune1Grace);
+      run.lune = 2; BE.Run.startNight(run);
+      eq(run.graceShots, 0); eq(run.shotsLeft, run.rules.shots, "Lune 2 : tirs normaux");
+    });
+    eq(nightReward({ seed: "ECO-G2" }, 0, 5, 2).r.shots, 3, "5 tirs restants dont 2 d'apprentissage → +3 or");
+    eq(nightReward({ seed: "ECO-G3" }, 0, 1, 2).r.shots, 0, "tirs d'apprentissage seuls → 0 or");
   });
   test("Économie", "plafonds d'intérêts : 5 · Tirelire 8 · Éclipse 6 → 3 · Glaneuse 0", () => {
     eq(nightReward({ seed: "ECO-2" }, 100, 0).r.interest, 5, "base");
@@ -1022,8 +1044,11 @@
 
   // ---------------------------------------------------------------- 8. débordement
   function overfill(run) {
+    // Pierres de taille 3 empilées dans les murs courants : deux rangées de plus que ce qui tient sous l'horizon
+    const J = run.jar, r = D.SIZES[3].r, per = Math.max(1, Math.floor((J.wallR - J.wallL) / (2 * r)));
+    const rows = Math.floor((J.floor - BE.Run.horizon(run)) / (2 * r)) + 2;
     let k = 0;
-    for (let row = 0; row < 7; row++) for (let c = 0; c < 7; c++) BE.Jar.add(run, { size: 3, stone: true, x: 44 + c * 45 + (row % 2) * 10, y: 590 - row * 52 - (k++ % 3) });
+    for (let row = 0; row < rows; row++) for (let c = 0; c < per; c++) BE.Jar.add(run, { size: 3, stone: true, x: J.wallL + r + c * 2 * r + (row % 2) * 3, y: J.floor - r - row * 2 * r - (k++ % 3) });
     BE.Jar.stabilize(run, 720);
   }
   test("Débordement", "détection au repos seulement (une étoile qui entre au-dessus de l'horizon ne fait pas perdre)", () => {
@@ -1127,6 +1152,105 @@
   });
 
   // ---------------------------------------------------------------- Nuit Blanche (intégration, GDD §2.2 / §9.2)
+  test("Débordement", "Vidange : bocal vidé (Veilleuse) ; Insomniaque : Soleils et + et Pierres restent, Bougie rallumée", () => {
+    withRun({ seed: "VID-1" }, (run) => {
+      for (let s = 1; s <= 5; s++) BE.Jar.add(run, { size: s, color: "braise", x: 100 + s * 30, y: 560 - s * 60 });
+      eq(BE.Jar.vidange(run), 2, "or : Soleil + Géante"); eq(run.jar.bodies.length, 0);
+    });
+    withRun({ seed: "VID-2", gardien: "insomniaque" }, (run) => {
+      for (let s = 1; s <= 5; s++) BE.Jar.add(run, { size: s, color: s % 2 ? "braise" : "givre", x: 100 + s * 30, y: 560 - s * 60 });
+      run.candle = 0;
+      eq(BE.Jar.vidange(run), 0, "or : seules les étoiles qui partent paient (Soleil et Géante restent)");
+      const left = run.jar.bodies.map((b) => (b.stone ? "P" : "") + b.size).sort().join(",");
+      // Soleil + Géante + 2 Pierres (268 px) ne tiennent pas côte à côte dans 200 px : ce qui dépasse encore s'évapore
+      assert(left === "4,5,P2,P2" || left === "4,P2,P2" || left === "5,P2,P2", "Pierres de départ + grosses étoiles : " + left);
+      eq(BE.Jar.overflowing(run).length, 0, "rien au-dessus de l'horizon");
+      eq(run.candle, 1, "Bougie rallumée");
+      assert(BE.Jar.isRest(run), "bocal tassé au repos");
+    });
+  });
+  test("Débordement", "Vidange partielle (Insomniaque) : une Nova sous une Géante ne laisse jamais un bocal débordant", () => {
+    withRun({ seed: "VID-3", gardien: "insomniaque" }, (run) => {
+      run.jar.bodies = [];
+      const cx = (run.jar.wallL + run.jar.wallR) / 2;
+      BE.Jar.add(run, { size: 6, color: "braise", x: cx, y: D.GEOM.floor - D.SIZES[6].r });
+      BE.Jar.add(run, { size: 5, color: "givre", x: cx + 2, y: D.GEOM.floor - 2 * D.SIZES[6].r - D.SIZES[5].r });
+      BE.Jar.add(run, { size: 4, color: "seve", x: cx - 4, y: D.GEOM.floor - 2 * D.SIZES[6].r - 2 * D.SIZES[5].r - D.SIZES[4].r });
+      BE.Jar.add(run, { size: 2, color: "braise", x: run.jar.wallL + 30, y: D.GEOM.floor - 30 });
+      BE.Jar.stabilize(run, 720);
+      BE.Jar.vidange(run);
+      eq(BE.Jar.overflowing(run).length, 0, "aucun corps au-dessus de l'horizon après la Vidange");
+      assert(BE.Jar.isRest(run), "bocal au repos");
+    });
+  });
+  test("Débordement", "nuit gagnée bocal débordant : le trop-plein s'évapore sans Bougie ; la nuit suivante ne commence pas en Débordement", () => {
+    withRun({ seed: "TRIM-1" }, (run, st) => {
+      run.jar.bodies = []; overfill(run);
+      assert(BE.Jar.overflowing(run).length > 0, "le bocal doit déborder");
+      run.candle = 1; run.total = run.quota;
+      BE.Run.go("CHECK"); BE.Run.update(DT);
+      eq(st.scene, "NIGHT_WON");
+      eq(BE.Jar.overflowing(run).length, 0, "trop-plein évaporé");
+      eq(run.candle, 1, "Bougie intacte");
+      assert(st.play.won.fill >= 0.99, "remplissage mesuré avant l'évaporation");
+    });
+  });
+  test("Débordement", "Trou Noir seul au fond : jamais en Débordement, même Éclipse 4 + Verre soufflé (horizon ≤ 492)", () => {
+    withRun({ seed: "TN-1", eclipse: 4, relics: ["R27"] }, (run) => {
+      run.jar.bodies = [];
+      BE.Jar.add(run, { size: 7, color: "braise", x: 180, y: D.GEOM.floor - D.SIZES[7].r });
+      BE.Jar.stabilize(run, 240);
+      assert(BE.Run.horizon(run) <= D.GEOM.horizonMax, "horizon borné");
+      eq(BE.Jar.overflowing(run).length, 0, "Trou Noir sous la ligne");
+      assert(BE.Jar.fill(run) < 1, "jauge < 100 %");
+    });
+  });
+  test("Débordement", "jauge = max(surface / capacité, hauteur du tas) ; 100 % quand le tas touche l'horizon", () => {
+    withRun({ seed: "GAU-1" }, (run) => {
+      run.jar.bodies = [];
+      eq(BE.Jar.fill(run), 0, "bocal vide");
+      BE.Jar.add(run, { size: 6, color: "braise", x: 180, y: D.GEOM.floor - D.SIZES[6].r });
+      BE.Jar.stabilize(run, 240);
+      const h = BE.Run.horizon(run), hh = D.GEOM.floor - h;
+      near(BE.Jar.fill(run), (2 * D.SIZES[6].r) / hh, 0.02, "une Nova seule : terme hauteur");
+      assert(BE.Jar.fill(run) > BE.Jar.areaFill(run), "hauteur > surface");
+      eq(BE.Jar.fillOf(0, h, 200, D.GEOM.floor, h), 1, "haut du tas sur la ligne → 100 %");
+      // Verre soufflé : le ctx (sans reliques) et le remplissage effectif (avec) diffèrent comme la jauge
+      const ctx = BE.Score.buildCtx([], run);
+      const eff = BE.Score.effective(ctx, ["R27"]);
+      assert(eff.jarFill > ctx.jarFill, "Verre soufflé : la ligne descend, le remplissage monte");
+    });
+  });
+  test("Sauvegarde", "reprise d'une sauvegarde v1.0 (bocal large, anciens rayons) : migrée vers le bocal courant", () => {
+    const meta = simMeta({});
+    const st = makeState(meta);
+    Dbg.inSandbox(st, () => {
+      BE.Run.startNewRun({ seed: "MIG-1" }); BE.Run.go("AIM");
+      botShots(st, 3, "mig");
+      const old = JSON.parse(JSON.stringify(st.run, (k, v) => (k && k.charCodeAt(0) === 95 ? undefined : v)));
+      // forme v1.0 : murs 16/344, rayons 14…62, corps répartis sur toute la largeur
+      const R1 = [0, 14, 19, 25, 32, 40, 50, 62];
+      old.v = 1; old.jar.wallL = 16; old.jar.wallR = 344;
+      old.jar.bodies = [];
+      for (let i = 0; i < 9; i++) {
+        const size = 1 + (i % 5), r = R1[size], m = r * r;
+        old.jar.bodies.push(Object.assign(BE.Phys.makeBody({ id: 500 + i, size, color: "braise", x: 30 + i * 36, y: D.GEOM.floor - r }), { r, m, im: 1 / m, sleep: true }));
+      }
+      eq(BE.Save.checkRun(old), null, "une sauvegarde v1 reste acceptée");
+      BE.Run.resume(old);
+      const run = st.run;
+      eq(run.v, 2, "version");
+      eq(run.jar.wallL, D.GEOM.jarL, "mur gauche"); eq(run.jar.wallR, D.GEOM.jarR, "mur droit");
+      for (const b of run.jar.bodies) {
+        eq(b.r, D.SIZES[b.size].r, "rayon du corps " + b.id);
+        assert(b.x - b.r >= D.GEOM.jarL - 1 && b.x + b.r <= D.GEOM.jarR + 1, "corps " + b.id + " dans le bocal");
+      }
+      eq(BE.Jar.overflowing(run).length, 0, "pas de Débordement hérité");
+      eq(st.scene, "AIM");
+      const f = BE.Run.funnel(run);
+      eq(f.L, D.GEOM.jarL, "entonnoir");
+    });
+  });
   test("Nuit Blanche", "victoire + Planétarium : Vidange → Aube → Lune 6, jamais de RUN_WON, Fragments au-delà de la Lune 5 seulement", () => {
     withRun({ seed: "NB-1", rooms: ["planetarium"] }, (run, st) => {
       assert(!BE.Run.nuitBlanche(run), "pas proposée hors victoire");

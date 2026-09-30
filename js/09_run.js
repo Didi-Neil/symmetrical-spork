@@ -58,9 +58,14 @@
   };
   Run.invalidatePassives = () => { pCache.key = null; };
 
-  /** Ligne d'horizon courante (§4) : 380, +24 Verre soufflé, +16 Éclipse 4. */
+  /** Ligne d'horizon sans les reliques (§4) : 452, +16 à l'Éclipse 4. */
+  Run.horizonBase = function (run) { return G.horizon + (run.eclipse >= 4 ? 16 : 0); };
+  /**
+   * Ligne d'horizon courante (§4) : 452, +24 Verre soufflé, +16 Éclipse 4 (492 au plus). Bornée à G.horizonMax : un
+   * Trou Noir seul au fond (haut à 616 − 116 = 500) reste toujours sous la ligne.
+   */
   Run.horizon = function (run) {
-    return G.horizon + Run.passives(run).horizon + (run.eclipse >= 4 ? 16 : 0);
+    return Math.min(G.horizonMax, Run.horizonBase(run) + Run.passives(run).horizon);
   };
 
   // ================================================================ création
@@ -75,9 +80,9 @@
     const seed = opts.seed || U.newSeed();
     const eclipse = opts.eclipse || 0;
     const run = {
-      v: 1, seed, streams: U.seedStreams(seed), daily: !!opts.daily, gardien: g.id, eclipse,
+      v: 2, seed, streams: U.seedStreams(seed), daily: !!opts.daily, gardien: g.id, eclipse,
       rules: U.deepCopy(g.rules),
-      lune: 1, nuit: 0, shotIndex: 0, shotsLeft: 0, bonusShots: 0, total: 0, quota: 0,
+      lune: 1, nuit: 0, shotIndex: 0, shotsLeft: 0, bonusShots: 0, graceShots: 0, total: 0, quota: 0,
       gold: D.ECO.startGold, candle: eclipse >= 6 ? 0 : g.rules.candle, swapsLeft: 0, reserve: 0, metronome: 0,
       bag: [], draw: [], nextSizeBonus: 0, relics: [], reactionCounts: {},
       clous: { A: null, B: null, C: null, D: null, E: null, F: null },
@@ -88,7 +93,9 @@
     };
     const bagKey = g.bag === "standard" && BE.Meta && BE.Meta.hasRoom("serre") ? "standardSeve" : g.bag;
     makeBag(run, D.BAGS[bagKey]);
-    for (const s of g.rules.startStones || []) Jar.add(run, { size: s, stone: true, x: 120 + run.jar.bodies.length * 120, y: G.floor - D.SIZES[s].r });
+    // Pierres de départ (L'Insomniaque) : réparties sur la largeur du bocal
+    const ss = g.rules.startStones || [], jw = run.jar.wallR - run.jar.wallL;
+    ss.forEach((s, i) => Jar.add(run, { size: s, stone: true, x: run.jar.wallL + (jw * (i + 1)) / (ss.length + 1), y: G.floor - D.SIZES[s].r }));
     if (opts.relics) for (const id of opts.relics) run.relics.push({ id, evolved: false });
     Firm.setupLune(run);
     Run.startNight(run);
@@ -100,7 +107,9 @@
     const P = Run.passives(run);
     run.quota = D.quota(run.lune, run.nuit, run.eclipse);
     run.total = 0; run.shotIndex = 0; run.bonusShots = 0;
-    run.shotsLeft = run.eclipse >= 5 ? 5 : run.rules.shots;
+    // Lune 1 : tirs d'apprentissage (accueil ; le bot greedy finit ses nuits de Lune 1 en ≤ 6 tirs, l'équilibrage n'en dépend pas)
+    run.graceShots = run.lune === 1 && run.eclipse < 5 ? D.ECO.lune1Grace : 0;
+    run.shotsLeft = (run.eclipse >= 5 ? 5 : run.rules.shots) + run.graceShots;
     run.swapsLeft = run.rules.swaps + P.swaps;
     run.metronome = 0;
     run.nightMax = 0;
@@ -187,6 +196,7 @@
     const st = BE.state;
     st.run = data; st.play = newPlay(); st.paused = false;
     Run.invalidatePassives();
+    Run.migrate(data);
     // §12.6 : le bocal n'est sérialisé qu'au repos (gelé par SETTLE / DESCENT / SETTLE_CANDLE avant AIM). Un tir en
     // attente est rejoué depuis cet état EXACT : re-stabiliser ici déplacerait les corps et changerait l'issue du tir
     // rejoué (30 % des reprises divergeaient). On ne stabilise que si un corps n'est pas au repos (sauvegarde ancienne).
@@ -199,6 +209,30 @@
       Run.go("AIM");
       Run.fire(a, true);
     } else Run.go("AIM");
+  };
+  /**
+   * Sauvegarde v1 (bocal large de la v1.0 : murs 16/344, rayons 14…62) → v2 (§12.6) : murs du bocal courants, rayon et
+   * masse de chaque corps selon DATA.SIZES, tassement silencieux (fusions → réserve), puis le trop-plein s'évapore.
+   * Aussi appliqué si un rayon ne correspond plus aux données (sauvegarde d'une version intermédiaire).
+   */
+  Run.migrate = function (run) {
+    const J = run.jar, PJ = D.PHYS.jar;
+    let changed = run.v !== 2;
+    for (const b of J.bodies) {
+      const r = D.SIZES[b.size] ? D.SIZES[b.size].r : b.r;
+      if (b.r !== r) { b.r = r; b.m = r * r * (b.stone ? PJ.stoneMass : 1); b.im = 1 / b.m; changed = true; }
+    }
+    const okL = J.wallL === G.jarL || J.wallL === G.etauL, okR = J.wallR === G.jarR || J.wallR === G.etauR;
+    if (!okL || !okR) changed = true;
+    run.v = 2;
+    if (!changed) return false;
+    // murs : on part des murs sauvegardés (plus larges) pour que Jar.applyRules resserre et repousse les corps
+    J.wallL = Math.min(J.wallL, G.jarL); J.wallR = Math.max(J.wallR, G.jarR);
+    for (const b of J.bodies) b.sleep = false;
+    Jar.applyRules(run);
+    Jar.settle(run);
+    Jar.trim(run);
+    return true;
   };
   Run.toTitle = function () { BE.state.paused = false; Run.go("TITLE"); };
   Run.abandon = function () {
@@ -230,10 +264,15 @@
       stars: [], pegs: S.pegs, targets: Firm.targets(run),
       g: D.PHYS.flight.g * (Firm.ruleActive(run, "maree") ? D.BOSSES.maree.flightG : 1),
       t: 0, wallL: G.wallL, wallR: G.wallR, ceil: G.ceil, exitY: G.flightToJar, ignoreObstacles: false,
+      funnel: Run.funnel(run),
       hooks: makeHooks(run),
     };
   }
   Run.makeWorld = makeWorld;
+  /** Entonnoir du vol (§4) : épaules du mur du ciel au col du bocal (murs courants, L'Étau compris). */
+  Run.funnel = function (run) {
+    return { wl: G.wallL, wr: G.wallR, L: run.jar.wallL, R: run.jar.wallR, y0: G.funnelY, y1: G.rimY, bot: G.floor, e: D.PHYS.flight.eFunnel };
+  };
 
   // ---------------------------------------------------------------- hooks de vol
   function clouPaired(run, slot) {
@@ -300,7 +339,7 @@
         // Sève : grossit au 3e contact avec un clou
         star.pegContacts++;
         if (star.color === "seve" && !star.seveGrown && star.pegContacts >= D.SEVE_GROW_AT && star.size < D.MAX_LAUNCH_SIZE) {
-          star.seveGrown = true; star.size++; star.r = D.SIZES[star.size].r;
+          star.seveGrown = true; star.size++; star.r = D.SIZES[star.size].rf;
           BE.emit("grow", { star, x: star.x, y: star.y });
         }
         const k = S.shot.noteK++;
@@ -320,7 +359,7 @@
   /** Clou Prisme : l'étoile se divise en deux de taille −1 (±25° autour de la vitesse réfléchie). */
   function splitStar(run, star, pair) {
     const S = play();
-    star.size--; star.r = D.SIZES[star.size].r;
+    star.size--; star.r = D.SIZES[star.size].rf;
     const sp = Math.hypot(star.vx, star.vy), a = Math.atan2(star.vy, star.vx);
     const a1 = a + U.rad(25), a2 = a - U.rad(25);
     star.vx = Math.cos(a1) * sp; star.vy = Math.sin(a1) * sp;
@@ -668,9 +707,13 @@
   SC.NIGHT_WON = {
     enter() {
       const run = BE.state.run, S = play();
-      S.won = { t: 0, rewarded: false, converted: false };
+      S.won = { t: 0, rewarded: false, converted: false, fill: Jar.fill(run), area: Jar.areaFill(run) };
       BE.emit("quota", { total: run.total, quota: run.quota });
       recordNight(run, run.nightMax || 1);
+      // §2.1 étape 7 : le quota passe avant le Débordement ; « le quota éteint le trop-plein » — ce qui dépasse
+      // l'horizon s'évapore (sans Bougie) pour que la nuit suivante ne commence jamais en Débordement
+      const over = Jar.overflowing(run);
+      if (over.length) { BE.emit("trim", { n: over.length, y: Run.horizon(run) }); S.won.trimmed = Jar.trim(run); }
     },
     update(dt) {
       const run = BE.state.run, S = play(), W = S.won;
@@ -684,10 +727,13 @@
         const P = Run.passives(run);
         const interest = Math.min(P.interestCap, Math.floor(run.gold / D.ECO.interestPer)); // avant la récompense
         const night = D.ECO.nightReward[run.nuit];
-        const shots = run.shotsLeft * (D.ECO.unusedShot + P.unusedShotBonus);
+        // les tirs d'apprentissage (Lune 1) sont les derniers de la rangée : inutilisés, ils ne rapportent rien
+        const paid = Math.max(0, run.shotsLeft - (run.graceShots || 0));
+        const shots = paid * (D.ECO.unusedShot + P.unusedShotBonus);
         run.gold += interest + night + shots;
         run.runStats.gold += interest + night + shots;
-        run.lastReward = { lune: run.lune, nuit: run.nuit, night, shots, shotsLeft: run.shotsLeft, interest, vidange: 0, chest: run.firm.chest };
+        const grace = Math.min(run.shotsLeft, run.graceShots || 0); // tirs d'apprentissage restés inutilisés (affichés, sans or)
+        run.lastReward = { lune: run.lune, nuit: run.nuit, night, shots, shotsLeft: paid, grace, interest, vidange: 0, chest: run.firm.chest };
         BE.emit("reward", run.lastReward);
       }
       if (W.t >= D.FX.nightWonFreeze + D.FX.nightWonConvert + 1.1) {
@@ -700,9 +746,11 @@
   SC.VIDANGE = {
     enter() {
       const run = BE.state.run;
-      let n = 0;
-      for (const b of run.jar.bodies) if (!b.stone && b.size >= D.ECO.vidangeMinSize) n++;
-      play().vid = { n: Math.min(D.ECO.vidangeMax, n), done: false };
+      const leave = Jar.vidangeLeaving(run), keep = run.jar.bodies.filter((b) => leave.indexOf(b) < 0);
+      let a = 0;
+      for (const b of keep) a += Math.PI * b.r * b.r;
+      play().vid = { n: Jar.vidangeGold(run), done: false, leave: leave.map((b) => b.id), kept: leave.length < run.jar.bodies.length,
+        fill0: Jar.fill(run), fill1: Math.min(1, a / Jar.capacity(run)) }; // jauge : du remplissage courant vers ce qui reste
       BE.emit("vidange", { n: play().vid.n });
     },
     update() {

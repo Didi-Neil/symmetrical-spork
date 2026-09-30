@@ -72,6 +72,7 @@
     return "#" + f(c[0]) + f(c[1]) + f(c[2]);
   }
   const C_DIM60 = U.rgba(P.dim, 0.6), C_DIM70 = U.rgba(P.dim, 0.7), C_LINE80 = U.rgba(P.line, 0.8), C_LINE = P.line;
+  const C_GLASS35 = U.rgba("#8fd8ff", 0.3);
   const C_TEXT85 = U.rgba(P.text, 0.85), C_DANGER25 = U.rgba(P.danger, 0.25), C_OR60 = U.rgba(P.or, 0.6);
   const DASH_H = [5, 5], DASH_S = [3, 3], DASH_R = [2, 3], DASH_P = [2, 4], NO_DASH = [];
 
@@ -940,50 +941,58 @@
   };
 
   // ================================================================ bocal (verre pré-rendu)
-  function jarPath(x, l, r, top, bot) {
+  // Silhouette : épaules de l'entonnoir (mur du ciel, y = funnelY → col du bocal, y = rimY), murs verticaux, fond arrondi.
+  function jarPath(x, l, r) {
+    const bot = G.floor;
     x.beginPath();
-    x.moveTo(l, top); x.lineTo(l, bot - 16); x.quadraticCurveTo(l, bot, l + 16, bot); x.lineTo(r - 16, bot); x.quadraticCurveTo(r, bot, r, bot - 16); x.lineTo(r, top);
+    x.moveTo(G.wallL, G.funnelY); x.lineTo(l, G.rimY);
+    x.lineTo(l, bot - 16); x.quadraticCurveTo(l, bot, l + 16, bot); x.lineTo(r - 16, bot); x.quadraticCurveTo(r, bot, r, bot - 16);
+    x.lineTo(r, G.rimY); x.lineTo(G.wallR, G.funnelY);
   }
   function buildJar(l, r) {
-    const top = G.flightToJar, bot = G.floor;
-    const ox = l - 12, oy = top - 10, w = r - l + 24, h = bot - top + 16;
+    const top = G.funnelY, rim = G.rimY, bot = G.floor;
+    const ox = G.wallL - 12, oy = top - 10, w = G.wallR - G.wallL + 24, h = bot - top + 16;
     let [c, x] = off(w, h);
     x.translate(-ox, -oy);
     // intérieur légèrement éclairci (#0f1428), à peine transparent pour laisser deviner le ciel
-    jarPath(x, l, r, top, bot); x.closePath();
+    jarPath(x, l, r); x.closePath();
     const ig = x.createLinearGradient(0, top, 0, bot);
-    ig.addColorStop(0, "rgba(15,20,40,0.72)"); ig.addColorStop(0.5, "rgba(15,20,40,0.88)"); ig.addColorStop(1, "rgba(18,24,52,0.95)");
+    ig.addColorStop(0, "rgba(15,20,40,0.0)"); ig.addColorStop(0.2, "rgba(15,20,40,0.6)"); ig.addColorStop(0.5, "rgba(15,20,40,0.88)"); ig.addColorStop(1, "rgba(18,24,52,0.95)");
     x.fillStyle = ig; x.fill();
     x.save(); x.clip();
     const bg = x.createRadialGradient((l + r) / 2, bot + 20, 10, (l + r) / 2, bot + 20, 200);
-    bg.addColorStop(0, "rgba(79,107,255,0.12)"); bg.addColorStop(1, "rgba(79,107,255,0)");
+    bg.addColorStop(0, "rgba(79,107,255,0.14)"); bg.addColorStop(1, "rgba(79,107,255,0)");
     x.fillStyle = bg; x.fillRect(l, top, r - l, bot - top);
     // reflet vertical le long du mur gauche (blanc 0,08)
     const rg = x.createLinearGradient(l, 0, l + 26, 0);
     rg.addColorStop(0, "rgba(255,255,255,0.08)"); rg.addColorStop(1, "rgba(255,255,255,0)");
-    x.fillStyle = rg; x.fillRect(l + 2, top + 6, 26, bot - top - 20);
+    x.fillStyle = rg; x.fillRect(l + 2, rim + 6, 26, bot - rim - 20);
     x.restore();
+    // hors du verre, sous les épaules : pénombre (le bocal est plus étroit que le ciel)
+    x.fillStyle = "rgba(5,7,16,0.55)";
+    x.beginPath(); x.moveTo(ox, top); x.lineTo(G.wallL, top); x.lineTo(l, rim); x.lineTo(l, bot + 16); x.lineTo(ox, bot + 16); x.closePath(); x.fill();
+    x.beginPath(); x.moveTo(ox + w, top); x.lineTo(G.wallR, top); x.lineTo(r, rim); x.lineTo(r, bot + 16); x.lineTo(ox + w, bot + 16); x.closePath(); x.fill();
     jarBack = c;
     // face avant : contour, lèvres, reflets
     [c, x] = off(w, h);
     x.translate(-ox, -oy);
     x.lineCap = "round"; x.lineJoin = "round";
     x.strokeStyle = U.rgba(P.glass, 0.18); x.lineWidth = 6;
-    jarPath(x, l, r, top + 8, bot); x.stroke();
+    jarPath(x, l, r); x.stroke();
     x.strokeStyle = U.rgba(P.glass, 0.6); x.lineWidth = 2;
-    x.beginPath();
-    x.moveTo(l - 7, top - 5); x.quadraticCurveTo(l, top - 3, l, top + 8);
-    x.lineTo(l, bot - 16); x.quadraticCurveTo(l, bot, l + 16, bot); x.lineTo(r - 16, bot); x.quadraticCurveTo(r, bot, r, bot - 16);
-    x.lineTo(r, top + 8); x.quadraticCurveTo(r, top - 3, r + 7, top - 5);
-    x.stroke();
+    jarPath(x, l, r); x.stroke();
+    // col du bocal : petite lèvre de verre
+    x.strokeStyle = U.rgba(P.glass, 0.45); x.lineWidth = 1.5;
+    x.beginPath(); x.moveTo(l - 6, rim + 2); x.lineTo(l + 1, rim + 2); x.moveTo(r + 6, rim + 2); x.lineTo(r - 1, rim + 2); x.stroke();
     x.strokeStyle = "rgba(255,255,255,0.22)"; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(l + 4, top + 30); x.lineTo(l + 4, bot - 40); x.stroke();
+    x.beginPath(); x.moveTo(l + 4, rim + 20); x.lineTo(l + 4, bot - 40); x.stroke();
+    x.beginPath(); x.moveTo(G.wallL + 10, top + 5); x.lineTo(l - 6, rim - 8); x.stroke();
     x.strokeStyle = "rgba(255,255,255,0.12)"; x.lineWidth = 2;
-    x.beginPath(); x.moveTo(r - 5, top + 60); x.lineTo(r - 5, top + 140); x.stroke();
+    x.beginPath(); x.moveTo(r - 5, rim + 30); x.lineTo(r - 5, rim + 110); x.stroke();
     x.beginPath(); x.moveTo(l + 30, bot - 4); x.quadraticCurveTo((l + r) / 2, bot - 1, r - 40, bot - 4); x.stroke();
     x.fillStyle = "rgba(255,255,255,0.18)";
-    x.beginPath(); x.ellipse(l + 12, top + 22, 3, 9, 0.1, 0, TAU); x.fill();
-    x.beginPath(); x.arc(l + 12, top + 38, 1.5, 0, TAU); x.fill();
+    x.beginPath(); x.ellipse(l + 12, rim + 22, 3, 9, 0.1, 0, TAU); x.fill();
+    x.beginPath(); x.arc(l + 12, rim + 38, 1.5, 0, TAU); x.fill();
     jarFront = c;
     jarBack.ox = jarFront.ox = ox; jarBack.oy = jarFront.oy = oy;
   }
@@ -996,7 +1005,7 @@
     const J = run.jar;
     ensureJar(J);
     g.drawImage(jarBack, jarBack.ox, jarBack.oy, jarBack.lw, jarBack.lh);
-    if (BE.Meta && BE.Meta.drawJarTheme) BE.Meta.drawJarTheme(g, run, J.wallL, J.wallR, G.flightToJar, G.floor); // thème « Aurore » (D16)
+    if (BE.Meta && BE.Meta.drawJarTheme) BE.Meta.drawJarTheme(g, run, J.wallL, J.wallR, G.rimY, G.floor); // thème « Aurore » (D16)
   };
   /** Face avant du verre (reflets par-dessus les étoiles), alerte, aurore, rémanence du Big Bang. */
   R.drawJarFront = function (run, danger) {
@@ -1020,7 +1029,7 @@
     if (danger) {
       const hb = t - FX.dangerT, pk = hb >= 0 && hb < 0.5 ? 1 - hb / 0.5 : 0;
       g.strokeStyle = P.danger; g.lineWidth = 2; g.globalAlpha = 0.25 + 0.35 * pk + 0.15 * Math.sin(t * 5);
-      jarPath(g, J.wallL, J.wallR, G.flightToJar + 8, G.floor); g.stroke();
+      jarPath(g, J.wallL, J.wallR); g.stroke();
       g.globalAlpha = 1;
     }
   };
@@ -1035,24 +1044,51 @@
     g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
   }
 
-  R.drawHorizon = function (run, danger) {
+  /**
+   * Ligne d'horizon + jauge de remplissage. level : 2 = danger (rouge, pouls), 1 = « presque » (ambre : l'étoile courante
+   * posée sur le tas dépasserait la ligne), 0 = calme. La jauge suit Jar.fill (max surface / hauteur, §4) en douceur ;
+   * pendant la Vidange elle descend vers ce qui reste au bocal.
+   */
+  let gaugeShown = -1, gaugeRun = null;
+  R.drawHorizon = function (run, level) {
+    const danger = level === 2, near = level === 1;
     const h = BE.Run.horizon(run);
-    const t = BE.state.time;
-    const pulse = danger ? 0.55 + 0.45 * Math.sin(t * TAU * 0.8) : 0;
-    if (danger) {
-      g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.25 + 0.25 * pulse;
-      g.drawImage(BE.FX.glow(P.danger), run.jar.wallL - 20, h - 16, run.jar.wallR - run.jar.wallL + 40, 32);
+    const t = BE.state.time, st = BE.state;
+    const pulse = danger ? 0.55 + 0.45 * Math.sin(t * TAU * 0.8) : near ? 0.5 + 0.5 * Math.sin(t * TAU * 0.5) : 0;
+    if (danger || near) {
+      g.globalCompositeOperation = "lighter"; g.globalAlpha = danger ? 0.25 + 0.25 * pulse : 0.12 + 0.1 * pulse;
+      g.drawImage(BE.FX.glow(danger ? P.danger : P.or), run.jar.wallL - 20, h - 16, run.jar.wallR - run.jar.wallL + 40, 32);
       g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
     }
-    g.strokeStyle = danger ? P.danger : C_DIM70;
-    g.globalAlpha = danger ? 0.55 + 0.45 * pulse : 1;
-    g.lineWidth = danger ? 1.6 : 1;
+    g.strokeStyle = danger ? P.danger : near ? P.or : C_DIM70;
+    g.globalAlpha = danger ? 0.55 + 0.45 * pulse : near ? 0.6 + 0.25 * pulse : 1;
+    g.lineWidth = danger ? 1.6 : near ? 1.3 : 1;
     g.setLineDash(DASH_H); g.lineDashOffset = -t * 8;
     g.beginPath(); g.moveTo(run.jar.wallL + 2, h); g.lineTo(run.jar.wallR - 2, h); g.stroke();
     g.setLineDash(NO_DASH); g.globalAlpha = 1;
-    // remplissage
-    const f = BE.Jar.fill(run);
-    lbl.fill.set(Math.round(f * 100), danger ? 1 : 0, fmtPct, danger ? P.danger : P.dim).draw(run.jar.wallR - 4, h - 8, 1);
+    // remplissage : jauge verticale à droite du bocal (du fond à l'horizon : 100 % = le tas touche la ligne)
+    let target = BE.Jar.fill(run);
+    const S = st.play;
+    if (st.scene === "VIDANGE" && S && S.vid && S.vid.fill0 !== undefined) {
+      const k = U.easeInCubic(U.clamp(st.sceneT / D.FX.vidange, 0, 1));
+      target = S.vid.fill0 + (S.vid.fill1 - S.vid.fill0) * k;
+      gaugeShown = target;
+    }
+    if (gaugeShown < 0 || gaugeRun !== run) { gaugeShown = target; gaugeRun = run; }
+    gaugeShown = U.approach(gaugeShown, target, 4, st.frameDt || 0.016);
+    const f = gaugeShown;
+    const gx = G.jarR + 16, gw = 7, gb = G.floor - 6, gt = h + 2, gh = gb - gt;
+    const tier = danger || f >= 0.85 ? 1 : near || f >= 0.6 ? 2 : 0;
+    const col = tier === 1 ? P.danger : tier === 2 ? P.or : P.glass;
+    g.fillStyle = "rgba(159,179,217,0.12)"; BE.FX.roundRect(g, gx, gt, gw, gh, 3.5); g.fill();
+    const fh = Math.max(0, Math.min(1, f)) * gh;
+    if (fh > 1) {
+      g.globalAlpha = danger ? 0.7 + 0.3 * pulse : 0.9;
+      g.fillStyle = col; BE.FX.roundRect(g, gx, gb - fh, gw, fh, 3.5); g.fill();
+      g.globalAlpha = 1;
+    }
+    g.strokeStyle = U.rgba(P.glass, 0.35); g.lineWidth = 1; BE.FX.roundRect(g, gx, gt, gw, gh, 3.5); g.stroke();
+    lbl.fill.set(Math.round(f * 100), tier, fmtPct, col === P.glass ? P.dim : col).draw(gx + gw / 2, gt - 8, 0.5);
   }
   const fmtPct = (n) => n + " %";
 
@@ -1097,7 +1133,7 @@
     // fantôme de taille à la première touche
     const cur = BE.Run.current(run);
     if (cur && pv.contacts.length && !cancel) {
-      const c = pv.contacts[0], col = famColor(cur.color), rr = D.SIZES[cur.size].r;
+      const c = pv.contacts[0], col = famColor(cur.color), rr = D.SIZES[cur.size].rf;
       g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.25 + 0.1 * Math.sin(t * 6);
       g.drawImage(BE.FX.glow(col), c.x - rr * 1.4, c.y - rr * 1.4, rr * 2.8, rr * 2.8);
       g.globalCompositeOperation = "source-over"; g.globalAlpha = 0.85;
@@ -1498,9 +1534,11 @@
       const x = px + Math.cos(a) * 29, y = py + Math.sin(a) * 29;
       const used = i < run.shotIndex;
       const bonus = i >= total - run.bonusShots && !used;
+      const grace = !used && !bonus && i >= total - run.bonusShots - (run.graceShots || 0); // tirs d'apprentissage (Lune 1)
       const last = !used && i === run.shotIndex && run.shotsLeft === 1;
       g.beginPath(); g.arc(x, y, last ? 2.6 + 0.8 * Math.max(0, Math.sin(t * 6)) : 2.6, 0, TAU);
       if (used) { g.strokeStyle = C_DIM60; g.lineWidth = 1; g.stroke(); }
+      else if (grace && !last) { g.fillStyle = C_GLASS35; g.fill(); g.strokeStyle = "#8fd8ff"; g.lineWidth = 1.3; g.stroke(); } // apprentissage : pastille creuse
       else { g.fillStyle = bonus ? P.or : last ? "#ff9ab0" : "#eef2ff"; g.fill(); }
     }
     if (run.reserve > 0) lbl.reserve.set(run.reserve, 0, fmtReserve).draw(px - 38, py + 20, 1);
@@ -1765,9 +1803,11 @@
     drawShadowSet(run, look, dt, t, 0);
     drawDying(t);
     // bocal
-    const danger = BE.Jar.danger(run);
+    const alert = st.scene === "AIM" || st.scene === "NIGHT_INTRO" ? BE.Jar.alertLevel(run) : BE.Jar.danger(run) ? 2 : 0;
+    const danger = alert === 2;
     const lostIds = st.scene === "RUN_LOST" && S.lost ? S.lost.bodies : null;
     const vid = st.scene === "VIDANGE" ? U.easeInCubic(U.clamp(st.sceneT / D.FX.vidange, 0, 1)) : 0;
+    const vidLeave = vid && S.vid && S.vid.kept ? S.vid.leave : null; // Insomniaque : seules les petites étoiles tombent
     const bodies = run.jar.bodies;
     const O = STAR_O;
     tightHalo = updateLod(run);
@@ -1776,7 +1816,7 @@
       const b = bodies[i];
       let bx = b.x, by = b.y;
       if (lostIds && lostIds.indexOf(b.id) >= 0) { bx += Math.sin(t * 60) * 2; by += Math.cos(t * 47) * 1; }
-      if (vid) { by += vid * 360 + (b.id % 5) * vid * 20; bx += Math.sin(b.id) * vid * 40; }
+      if (vid && (!vidLeave || vidLeave.indexOf(b.id) >= 0)) { by += vid * 360 + (b.id % 5) * vid * 20; bx += Math.sin(b.id) * vid * 40; }
       // squash & stretch : fusion 1,25 → 0,9 → 1 en 180 ms ; atterrissage plus doux
       let sx = 1, sy = 1;
       const ms = t - (b.squashT || -9);
@@ -1793,8 +1833,12 @@
       O.lookX = look ? look.x : bx + Math.sin(t * 0.3 + b.id) * 30; O.lookY = look ? look.y : by - 30;
       O.seed = b.id * 13; O.sx = sx; O.sy = sy; O.bicolor = bic > 0 ? b.bicolor : null; O.bicolorA = bic;
       O.excited = danger && by - b.r < hz; O.stretch = 0; // inquiète au-dessus de l'horizon
+      // le verre grossit l'étoile qui entre : rayon de vol → rayon du bocal en 0,16 s
+      const gk = b.fromShot ? (t - (b.landT === undefined ? -9 : b.landT)) / 0.16 : 1;
+      O.scale = gk >= 0 && gk < 1 ? (D.SIZES[b.size].rf + (D.SIZES[b.size].r - D.SIZES[b.size].rf) * U.easeOutBack(gk)) / D.SIZES[b.size].r : 1;
       R.drawStar(bx, by, b.size, b.color, O);
     }
+    O.scale = 1;
     tightHalo = false;
     // étoiles en vol : traînée lumineuse + étirement dans le sens de la vitesse
     if (S.flight) {
@@ -1821,12 +1865,13 @@
         const sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
         O.pure = false; O.lookX = s.x + s.vx; O.lookY = s.y + s.vy; O.seed = s.id * 13; O.sx = 1; O.sy = 1; O.bicolor = null; O.bicolorA = 0;
         O.excited = true; O.stretch = Math.min(0.3, sp / 2600); O.dir = Math.atan2(s.vy, s.vx);
+        O.scale = s.r / D.SIZES[s.size].r; // rayon de vol (plus petit que dans le bocal)
         R.drawStar(s.x, s.y, s.size, s.color, O);
-        O.stretch = 0; O.excited = false;
+        O.stretch = 0; O.excited = false; O.scale = 1;
       }
     }
     R.drawJarFront(run, danger);
-    R.drawHorizon(run, danger);
+    R.drawHorizon(run, alert);
     if (st.scene === "AIM" && !st.paused) R.drawAim(S, run);
     FX.drawBeams(g);
     FX.drawRings(g);

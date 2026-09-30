@@ -1,6 +1,15 @@
-# BOCAL D'ÉTOILES — Document de design final (GDD v1.0)
+# BOCAL D'ÉTOILES — Document de design final (GDD v1.1)
 
 > Seul document de référence du projet. Tout ce qui n'y figure pas n'est pas dans la v1. Les valeurs chiffrées sont des valeurs de départ, à ajuster uniquement dans `data.js`.
+
+> **Journal des amendements — v1.1 « Bocal étroit »** (la tension Suika manquait : bocal rempli à ≈ 11 % en fin de Nuit du Boss, aucun Débordement).
+> - **Bocal plus étroit que le ciel, avec entonnoir** (§4, §5.3) : bocal de 200 × 164 px sous l'horizon (murs x = 80 / 280, horizon y = 452), épaules de verre de (16, 330) → (80, 385). L'Étau : 96 / 264.
+> - **Deux rayons par taille** (§5.2) : le rayon en vol reste 14…62 (treillis inchangé) ; au bocal, 20 / 25 / 31 / 38 / 46 / 55 / 66 (courbe aplatie, chaque fusion libère 20–30 % de place).
+> - **Remplissage = Σ aires / capacité** (capacité = surface utile × 0,6), jauge verticale à côté du bocal : 100 % ≈ Débordement (§4, §13.3).
+> - **Quotas redistribués** vers les Lunes 1–2 (§6.1) et **accélération automatique** plus précoce, ×2 dès 2 s et ×3 dès 3,5 s (§5.8).
+> - **Tirs d'apprentissage** : +2 tirs par nuit en Lune 1, sans or s'ils restent inutilisés (§2.2, §7.3), pour garder l'accueil aussi doux qu'en v1.0 malgré des quotas de Lune 1 plus hauts.
+> - **Gardiens** (§6.6) : L'Insomniaque ne perd à la Vidange que ses étoiles de taille < 4 et rallume sa Bougie à chaque Lune ; La Forgeronne a 2 Bougies. Cible Big Bang de l'Insomniaque suspendue (§13.3).
+> - Mesure (500 runs greedy) : 9/9 cibles §13.3, remplissage fin de Nuit du Boss ≈ 59 %, Débordement ≈ 25 % des défaites (détail : `docs/ARCHITECTURE.md` §16.3).
 
 ---
 
@@ -102,13 +111,14 @@ On retient **BOCAL D'ÉTOILES**. C'est le concept le plus original (9/9/9), celu
 4. **TOURELLES** (0 à 1,5 s). Chaque étoile Foudre du bocal tire un éclair sur l'Ombre la plus basse.
 5. **DÉCOMPTE** (1 à 2,5 s, accélérable). On affiche l'Éclat de base et le Mult de base, puis les reliques de gauche à droite, puis la **Lumière = ⌊Éclat × Mult⌋**, qui s'ajoute au total de la nuit.
 6. **DESCENTE** (0,6 s). Les compteurs des Ombres baissent. Celles qui arrivent à 0 descendent d'une rangée, celles de la rangée 5 tombent dans le bocal comme Pierres Noires, et la rangée fantôme apparaît en haut.
-7. **VÉRIFICATION.** Si le quota est atteint, la nuit est gagnée. Sinon, si un objet au repos dépasse la ligne d'horizon, c'est le Débordement. Sinon, si les tirs sont épuisés, la nuit est perdue. Sinon, on passe au tir suivant.
+7. **VÉRIFICATION.** Si le quota est atteint, la nuit est gagnée : ce qui dépasse alors la ligne d'horizon s'évapore (« le quota éteint le trop-plein », sans Bougie ni or), si bien qu'une nuit ne commence jamais en Débordement. Sinon, si un objet au repos dépasse la ligne d'horizon, c'est le Débordement. Sinon, si les tirs sont épuisés, la nuit est perdue. Sinon, on passe au tir suivant.
 
 ### 2.2 Boucle de run (10 à 14 min)
 
 - **5 Lunes × 3 nuits** : Nuit Mince, Nuit Pleine, Nuit du Boss, soit 15 nuits.
 - **Au plus 6 tirs par nuit.** La nuit **s'arrête dès que la Lumière cumulée atteint le quota**. Chaque tir non utilisé rapporte +1 or.
-- **Le Bocal reste plein pendant les 3 nuits d'une Lune** (la tension monte, mais le Mult potentiel aussi, et c'est pour cela que la Nuit Mince a le plus petit quota). Il est **vidé** à la fin de la Lune (Vidange).
+- **Tirs d'apprentissage (Lune 1, v1.1)** : chaque nuit de la Lune 1 accorde **+2 tirs** (pastilles bleutées au bout de la rangée, hors Éclipse 5). Ils sont joués en dernier et ne rapportent pas d'or s'ils restent inutilisés : un joueur qui boucle ses nuits en 6 tirs n'y gagne rien, un débutant qui vise au hasard a de quoi finir sa première Lune.
+- **Le Bocal reste plein pendant les 3 nuits d'une Lune** (la tension monte, mais le Mult potentiel aussi, et c'est pour cela que la Nuit Mince a le plus petit quota). Il est **vidé** à la fin de la Lune (Vidange ; L'Insomniaque ne perd que ses petites étoiles, §6.6).
 - **Aube** (boutique) après chaque nuit gagnée : reliques, étoiles, clous, gravures, paquet Constellation, relance, verrouillage, vente, épuration du Sac.
 - **La règle du boss** de la Lune est annoncée dès l'Aube qui précède la Nuit du Boss, et aussi sur la carte d'introduction de la Lune.
 - **Défaite :** fin de nuit sous le quota, ou Débordement sans Bougie de secours.
@@ -178,22 +188,27 @@ y=235  │ │   clous r2                                                │   �
 y=258  │ │ rangée 4                                                  │   │
 y=281  │ │   clous r3                                                │   │
 y=304  │ │ rangée 5 (dernière)                                       │   │
-y=340  │ │ — seuil vol → bocal —                                     │   │
-y=352  │ │   compteur live  ✦ 24 × 3,5  (bleu × rouge)               │   │
-y=380  │ ├─ ─ ─ ─ LIGNE D'HORIZON (pointillés) ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┤   │
-       │ │                    BOCAL                                  │   │
-y=616  │ └──────────────── fond du bocal ────────────────────────────┘   │
+y=330  │ │╲  épaules de l'entonnoir (x=16 → 80 · x=344 → 280)       ╱│   │
+y=340  │ │ ╲ — seuil vol → bocal (dans le col seulement) —        ╱ │   │
+y=352  │ │  ╲  compteur live  ✦ 24 × 3,5  (bleu × rouge)         ╱  │   │
+y=385  │ │   └─┐ col du bocal : murs x = 80 et x = 280     ┌─────┘   │   │
+y=452  │ │     ├─ ─ LIGNE D'HORIZON (pointillés) ─ ─ ─ ─ ┤  jauge  │   │
+       │ │     │              BOCAL (200 × 164)           │   %     │   │
+y=616  │ │     └──────────── fond du bocal ───────────────┘         │   │
 y=618  │ bande reliques : 5 icônes 22 px, centres x = 84,132,180,228,276 │
 y=640  └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Murs latéraux** (Firmament et bocal) : x = 16 et x = 344, sur toute la hauteur de jeu. Sous « L'Étau », les murs du bocal (y > 340) passent à x = 36 et x = 324.
+- **Murs latéraux du Firmament** : x = 16 et x = 344 (vol).
+- **Bocal plus étroit que le ciel** (amendement « géométrie du bocal ») : murs du bocal x = **80** et x = **280** (200 px). Entre les deux, un **entonnoir** : deux épaules de verre rectilignes de (16, 330) à (80, 385) et de (344, 330) à (280, 385), prolongées par les murs verticaux du bocal. En vol, les épaules sont des murs (restitution **0,3**, conservation tangentielle 0,98, ne comptent pas comme rebonds sur un mur) : une étoile tombée hors du col glisse jusqu'au bocal. Sous « L'Étau », les murs du bocal passent à x = 96 et x = 264 (les épaules suivent).
 - **Grille des Ombres :** 6 colonnes, centres x = **45, 99, 153, 207, 261, 315** (pas de 54). 5 rangées, centres y = **120, 166, 212, 258, 304** (pas de 46). Rayon d'une Ombre : **18**.
 - **Treillis de clous :** coins entre les cellules, x = **72, 126, 180, 234, 288** (colonnes c0 à c4) et y = **143, 189, 235, 281** (rangées r0 à r3), soit 20 positions. Rayon d'un clou : **5**. La distance entre un centre d'Ombre et un coin est de 35,5 : il n'y a jamais de chevauchement.
 - **Emplacements de clous spéciaux** (6, fixes, en losange) : A(r0,c1), B(r0,c3), C(r1,c2), D(r2,c1), E(r2,c3), F(r3,c2). Paires adjacentes : A–C, B–C, C–D, C–E, D–F, E–F.
 - **Plafond :** y = 44 (restitution 0,85).
-- **Ligne d'horizon :** y = 380. Elle vaut 404 avec « Verre soufflé » et 396 à l'Éclipse 4 (les deux se cumulent : 420).
-- **Surface utile du bocal :** 328 × 236 = **77 408 px²** (sert au calcul du remplissage).
+- **Ligne d'horizon :** y = 452. Elle vaut 476 avec « Verre soufflé » et 468 à l'Éclipse 4 (les deux se cumulent : 492). Elle ne descend **jamais sous y = 492** (= 616 − Ø 116 d'un Trou Noir − 8 px) : un Trou Noir seul au fond reste toujours sous la ligne.
+- **Surface utile du bocal :** 200 × 164 = **32 800 px²**. **Capacité** = surface utile (murs courants, horizon courant) × **0,6** (compacité mesurée d'un tas d'étoiles au repos : le bocal déborde vers 55–65 % de sa surface).
+- **Remplissage (jauge)** = **max(Σ aires / capacité, hauteur du tas)**, où hauteur du tas = (fond − haut du plus haut corps posé) / (fond − horizon). Le terme « hauteur » vaut exactement 100 % quand le tas touche la ligne : la jauge ne peut plus afficher 71 % pour un tas de grosses étoiles déjà au ras de l'horizon, ni 77 % pour deux grosses étoiles posées au fond d'un bocal à moitié vide sans que la hauteur le confirme (v1.1b). Une étoile qui tombe encore (> 60 px/s) ne compte pas dans la hauteur. Affichage : jauge verticale à droite du bocal (du fond à l'horizon), animée en douceur ; or ≥ 60 %, rouge ≥ 85 % ou en danger ; pendant la Vidange elle descend vers ce qui reste au bocal. C'est **cette** valeur que lisent Balance, Équilibre et le défi D02.
+- **Alerte à deux niveaux (visée) :** **ambre** (ligne et lueur ambrées, jauge au moins or, sans son) dès que l'étoile courante, posée sur le haut du tas, dépasserait la ligne, soit un corps au repos à moins de max(40 px, diamètre au bocal de l'étoile courante) de l'horizon ; **rouge** (ligne rouge qui pulse, verre rosé, battement de cœur, vignette) à moins de 16 px, comme en v1.0.
 
 ### 4.1 Dispositions de clous (masques 4 rangées × 5 colonnes, 1 = clou gris)
 
@@ -222,20 +237,22 @@ Un emplacement spécial qui contient un clou spécial est toujours présent, que
 
 ### 5.2 Étoiles : tailles
 
-| Taille | Nom | Rayon (px) | Aire | Mult gagné en y fusionnant | Emoji (partage) |
-|---|---|---|---|---|---|
-| 1 | Poussière | 14 | 616 | — | ▫️ |
-| 2 | Étincelle | 19 | 1 134 | +1 | ▫️ |
-| 3 | Astre | 25 | 1 963 | +2 | ⭐ |
-| 4 | Soleil | 32 | 3 217 | +3 | 🌟 |
-| 5 | Géante | 40 | 5 027 | +5 | 🟠 |
-| 6 | Nova | 50 | 7 854 | +8 | 💥 |
-| 7 | Trou Noir | 62 | 12 076 | +13 | 🕳️ |
-| 7+7 | **Big Bang** | — | — | **×10 final** | 🌌 |
+| Taille | Nom | Rayon en vol (px) | Rayon au bocal (px) | Aire au bocal | Mult gagné en y fusionnant | Emoji (partage) |
+|---|---|---|---|---|---|---|
+| 1 | Poussière | 14 | 20 | 1 257 | — | ▫️ |
+| 2 | Étincelle | 19 | 25 | 1 963 | +1 | ▫️ |
+| 3 | Astre | 25 | 31 | 3 019 | +2 | ⭐ |
+| 4 | Soleil | 32 | 38 | 4 536 | +3 | 🌟 |
+| 5 | Géante | 40 | 46 | 6 648 | +5 | 🟠 |
+| 6 | Nova | 50 | 50 | 7 854 | +8 | 💥 |
+| 7 | Trou Noir | 58 | 58 | 10 568 | +13 | 🕳️ |
+| 7+7 | **Big Bang** | — | — | — | **×10 final** | 🌌 |
+
+- **Deux rayons** (amendement « géométrie du bocal ») : le Firmament est loin, le verre du bocal grossit. En vol, l'étoile garde son petit rayon (le treillis de clous, écart 44 px, reste traversable) ; en entrant dans le bocal elle prend son **rayon au bocal** (animation de 0,16 s). La courbe du bocal est aplatie (×1,2 par taille au lieu de ×1,3) : une fusion libère **20 à 30 %** de place, et les petites étoiles pèsent vraiment dans le bocal. **v1.1b** : le haut de la courbe est encore aplati (Nova 50, Trou Noir 58 au lieu de 55 / 66) ; avec 55 / 66, une Nova et une Géante ou un Trou Noir et un Astre ne tenaient pas côte à côte sous l'horizon, et le Trou Noir n'apparaissait dans aucun des 1 900 runs mesurés (Big Bang, D08, Singularité et l'archétype Tour de Babel devenaient du contenu mort). Désormais Nova + Géante (192 px) et Trou Noir + Astre (178 px) tiennent sur le fond, et un Trou Noir seul reste sous l'horizon le plus bas (§4).
 
 - Taille maximale **lancée** : 5 (au-delà, les bonus de taille sont perdus).
 - Dégâts aux Ombres = **taille** (+ modificateurs).
-- Masse = r² (les Pierres Noires ont une masse de r² × 1,5).
+- Masse = r² au bocal (les Pierres Noires ont une masse de r² × 1,5 ; elles prennent aussi le rayon au bocal).
 
 ### 5.3 Régime VOL
 
@@ -250,7 +267,8 @@ Un emplacement spécial qui contient un clou spécial est toujours présent, que
 | Conservation tangentielle au contact | 0,98 |
 | Vitesse minimale après contact clou/Ombre | 140 px/s (si elle est plus faible, on renormalise dans la direction réfléchie) |
 | Délai avant de retoucher le même clou ou la même Ombre | 0,12 s par paire étoile–cible |
-| Passage au régime BOCAL | Centre y > 340 |
+| Épaules de l'entonnoir (§4) | restitution 0,3, pas de rebond compté |
+| Passage au régime BOCAL | Centre y > 340 **et** étoile entièrement dans le col (80 ≤ x − r, x + r ≤ 280) ; x ramené entre les murs avec le rayon au bocal |
 
 **Collision cercle contre obstacle statique :** `d = |p − c|`. Si `d < r + rc` : `n = (p − c)/d`, `p = c + n·(r + rc + 0,01)`, `vn = v·n`. Si `vn < 0` : `v -= (1 + e)·vn·n`, puis `v_t *= 0,98`. Pas de tunneling : le déplacement maximal par pas est de 900/120 = 7,5 px, bien moins que le diamètre minimal combiné de 2 × (14 + 5) = 38 px.
 
@@ -313,8 +331,8 @@ La Forgeronne ne peut pas faire de fusion mixte : deux étoiles de couleurs diff
 ### 5.8 Durée d'un tir, accélérations, garde-fous
 
 - **Temps de simulation écoulé depuis le lâcher (T) :**
-  - T ≥ 6 s : vitesse ×2 (automatique).
-  - T ≥ 10 s : vitesse ×3.
+  - T ≥ 2 s : vitesse ×2 (automatique).
+  - T ≥ 3,5 s : vitesse ×3.
   - T ≥ 14 s : les étoiles en vol ignorent clous et Ombres et tombent directement.
 - **Doigt ou F maintenu :** ×3. Le cumul avec l'accélération automatique est plafonné à ×4.
 - **Accélération :** exécuter k pas de 1/120 par tick logique (k = 2, 3 ou 4). Maximum de 8 pas par frame de rendu, et le surplus est reporté.
@@ -340,6 +358,8 @@ PV d'une Ombre = `round(PV_base × HPmult × (Corbeau ? 1,2 : 1) × (Éclipse �
 | Nuit Blanche L | 9 000 × 3,5^(L−5) | ×1,5 | ×2 |
 
 Les valeurs sont arrondies à 10 près. Éclipse ≥ 1 : ×1,25.
+
+**Valeurs en jeu** (réglage mesuré, `DATA.QUOTA_BASE`, voir `docs/ARCHITECTURE.md` §16.3) : Nuit Mince L1 **200** · L2 **800** · L3 **1 300** · L4 **2 500** · L5 **2 550** (Pleine ×1,5, Boss ×2) ; Nuit Blanche `2 550 × 3,5^(L−5)`. Avec le bocal étroit, les Lunes 1–2 demandent plus de tirs (le bocal s'y remplit vraiment) et les Lunes 4–5 un peu moins (le Débordement y fait déjà le tri). v1.1b : Lune 2 ramenée de 900 à 800 (le mur de quota de la Lune 2 est ce que les joueurs réels rencontrent d'abord ; un bot à visée imprécise, σ = 1,5°, n'y passe que ≈ 4 fois sur 10), une partie reportée sur les Lunes 4–5.
 
 **Puissance joueur visée** (Lumière moyenne par tir, sert de référence pour l'équilibrage) : L1 ≈ 30 · L2 ≈ 95 · L3 ≈ 320 · L4 ≈ 1 050 · L5 ≈ 3 400. Cible : une nuit se termine en **4,2 ± 1 tirs** en moyenne.
 
@@ -389,7 +409,7 @@ Un boss est un cercle de **rayon 40** qui occupe **2 × 2 cellules** (colonnes 3
 | **L'Avare** | base | Les clous gris donnent 0 Éclat (les clous spéciaux, les Ombres et les murs comptent) |
 | **La Grêle** | base | Après chaque tir, une Pierre Noire de taille 1 tombe à x = centre du boss |
 | **La Marée** | Salle des Cartes | Gravité du bocal ×1,5, gravité de vol ×1,3 |
-| **L'Étau** | Salle des Cartes | Les murs du bocal passent à x = 36 et 324 pendant la nuit (les corps en dehors sont repoussés au début de la nuit, et les fusions qui en résultent vont dans la réserve) |
+| **L'Étau** | Salle des Cartes | Les murs du bocal passent à x = 96 et 264 pendant la nuit (les corps en dehors sont repoussés au début de la nuit, et les fusions qui en résultent vont dans la réserve) |
 | **L'Éclipse** (final, Lune 5, fixe) | toujours | Tant qu'elle vit, **le Mult final de chaque tir est divisé par 2**. Sous 50 % de PV, la règle « Le Voile » s'ajoute. |
 
 Les boss des Lunes 1 à 4 sont tirés parmi les boss disponibles (flux `waves`), sans répétition dans un run.
@@ -404,9 +424,9 @@ Corps du bocal : masse ×1,5, restitution 0,05, ne fusionne jamais. Elle est bri
 |---|---|---|---|
 | **La Veilleuse** | Standard : 5 reliques, 6 tirs par nuit, 1 échange par nuit, 1 Bougie de secours, intérêts plafonnés à 5 | Voir ci-dessous | Départ |
 | **L'Astronome** | Voit les 3 étoiles suivantes. 2 échanges par nuit (il peut échanger avec n'importe laquelle des 3). **4 emplacements de relique.** | Standard | Défi D09 : atteindre la Lune 3 |
-| **La Forgeronne** | Pas de fusion mixte (donc pas de réactions). **Fusions pures : Mult ×2** (au lieu de ×1,5). | 10 étoiles de 2 couleurs : Braise 1,1,1,2,2 et Givre 1,1,1,2,2 | D10 : 15 fusions pures en un run |
+| **La Forgeronne** | Pas de fusion mixte (donc pas de réactions). **Fusions pures : Mult ×2** (au lieu de ×1,5). **2 Bougies de secours** (v1.1 : dans le bocal étroit, les étoiles de couleurs différentes qui ne fusionnent pas l'encombrent vite). | 10 étoiles de 2 couleurs : Braise 1,1,1,2,2 et Givre 1,1,1,2,2 | D10 : 15 fusions pures en un run |
 | **La Glaneuse** | **Pas d'intérêts.** +1 or par Ombre tuée. Reliques −1 or (minimum 2). | Standard | D11 : 150 Ombres tuées (cumulé) |
-| **L'Insomniaque** | **Le bocal n'est jamais vidé entre les Lunes.** Mult final ×2 à chaque tir. Le run commence avec 2 Pierres Noires de taille 2 dans le bocal. | Standard | D12 : gagner un run |
+| **L'Insomniaque** | **Le bocal n'est jamais vraiment vidé** : à la Vidange, seules les étoiles de taille < 4 s'évaporent ; les Soleils et plus et les Pierres Noires restent, le bocal se tasse en silence (fusions → réserve), puis ce qui dépasse encore l'horizon s'évapore (une Lune ne commence jamais en Débordement). Les étoiles gardées **ne rapportent pas l'or de la Vidange** (seules celles qui quittent le bocal paient ; une même Géante ne paie donc jamais deux fois). **Sa Bougie se rallume à chaque Vidange.** Mult final ×1,5 à chaque tir (réglage v1.0). Le run commence avec 2 Pierres Noires de taille 2 dans le bocal. (v1.1 : avec le bocal étroit, garder tout le bocal rendait le Gardien quasi injouable, ≈ 4 % de victoires.) | Standard | D12 : gagner un run |
 
 **Sac standard (3 couleurs, 10 étoiles) :** Braise 1,1,2 · Givre 1,1,2 · Foudre 1,1,2 · Braise 2.
 **Sac standard avec la Sève débloquée (10 étoiles) :** Braise 1,1,2 · Givre 1,1,2 · Foudre 1,2 · Sève 1,2.
@@ -446,11 +466,11 @@ La règle à la Balatro est enseignée par l'aperçu : les « + Mult » doivent 
 |---|---|
 | Or de départ | 4 |
 | Nuit gagnée | Mince +3, Pleine +4, Boss +5 |
-| Chaque tir non utilisé | +1 (Glaneur : +2) |
+| Chaque tir non utilisé | +1 (Glaneur : +2) ; les 2 tirs d'apprentissage de la Lune 1 ne comptent pas |
 | Intérêts (calculés **avant** d'ajouter la récompense) | +1 par tranche de 5 or détenus, plafond 5 (Tirelire 8, Éclipse 6 plafond 3, Glaneuse 0) |
 | Boss tué | +5 |
 | Élite tuée | +3 et Coffre |
-| Vidange (fin de Lune) | +1 par étoile de taille ≥ 4 dans le bocal (max +5) |
+| Vidange (fin de Lune) | +1 par étoile de taille ≥ 4 qui quitte le bocal (max +5) ; celles que garde L'Insomniaque ne paient pas |
 | Clou d'or, Cendre, Dorée, Corbeau, Glaneuse | voir les fiches |
 
 ---
@@ -479,7 +499,7 @@ Prix : Commune 4 · Peu commune 6 · Rare 8 (+1 à l'Éclipse ≥ 3, −1 pour l
 | R11 | Horloge | C | P | Tous les 3 tirs (3e, 6e), les Ombres ne descendent pas | DÉFENSE | Départ |
 | R12 | Poids plume | C | C | +1 Éclat par clou touché si l'étoile lancée est de taille 1 ou 2 | ÉCLAT SAC | Départ |
 | R13 | Télescope | PC | C | +4 Mult par fusion de taille ≥ 4 ce tir | MULT FUSION | Défi D01 |
-| R14 | Balance | PC | C | ×2 Mult si le bocal est rempli à moins de 40 % | xMULT BOCAL | Défi D02 |
+| R14 | Balance | PC | C | ×2 Mult si le bocal est rempli à moins de 50 % (jauge §4). v1.1b : le seuil passe de 40 à 50 % car la jauge lit désormais la capacité et la hauteur ; à 40 % il n'était vrai que sur ≈ 44 % des tirs du bot greedy (≈ 100 % en v1.0, où le bocal restait presque vide) ; à 50 %, ≈ 57 %. C'est une vraie contrainte « bocal bas » | xMULT BOCAL | Défi D02 |
 | R15 | Alchimiste | PC | V | Les fusions pures donnent le Mult d'une taille au-dessus (Trou Noir : +21) | PURE MULT | Défi D03 |
 | R16 | Vitrail | PC | C | +2 Mult par couleur différente présente dans le bocal (max +8) | MULT RÉACTION | Bibliothèque |
 | R17 | Paratonnerre | PC | V | Les étoiles Foudre du bocal tirent 2 éclairs | FOUDRE OMBRE | Bibliothèque |
@@ -506,7 +526,7 @@ Prix : Commune 4 · Peu commune 6 · Rare 8 (+1 à l'Éclipse ≥ 3, −1 pour l
 | Évolution | Recette | Effet | Indice du Grimoire |
 |---|---|---|---|
 | Observatoire Ionique | Télescope + Plasma | +4 Mult par fusion de taille ≥ 4. Chaque Plasma compte comme une fusion de taille 4 pour tous les déclencheurs. | « L'œil qui regarde loin voudrait voir l'éclair de près. » |
-| Équilibre | Balance + Vapeur | ×3 Mult si le bocal est rempli à moins de 50 % | « La vapeur allège les plateaux. » |
+| Équilibre | Balance + Vapeur | ×3 Mult si le bocal est rempli à moins de 60 % (jauge §4 : ≈ 69 % des tirs ; 50 % avant la v1.1b) | « La vapeur allège les plateaux. » |
 | Queue d'Aurore | Comète + Photosynthèse | +3 Éclat par rebond sur un mur et ×1,1 Mult par rebond sur un mur (max ×3) | « La comète rêve de faire pousser la lumière. » |
 | Œil du Cyclone | Paratonnerre + Tempête | Les Foudre tirent 3 éclairs et gèlent leur cible | « Au cœur de la tempête, la foudre voit clair. » |
 | Fonderie | Carrière + Cendre | +5 Mult par Pierre brisée, et +1 or par Pierre brisée | « La pierre noire fond en or dans les bonnes braises. » |
@@ -591,7 +611,7 @@ Total : 315 ◇, soit environ 20 à 25 runs. Il n'y a **aucun bonus de statistiq
 | # | Défi | Récompense |
 |---|---|---|
 | D01 | Fusionner un Soleil (taille 4) | Télescope |
-| D02 | Gagner une nuit avec le bocal rempli à moins de 25 % | Balance |
+| D02 | Gagner une nuit avec la jauge du bocal sous 35 % (v1.1b : jauge = max surface / hauteur, §4 ; ≈ 8 % des nuits gagnées au bot greedy, l'ancien « < 25 % de 77 408 px² » était toujours vrai) | Balance |
 | D03 | 3 fusions pures dans un même tir | Alchimiste |
 | D04 | Briser 3 Pierres Noires dans un même tir | Carrière |
 | D05 | Gagner une nuit en 2 tirs ou moins | Sablier |
@@ -624,7 +644,7 @@ Un niveau N se débloque en gagnant au niveau N−1 avec ce Gardien. Chaque nive
 | 1 | Quotas ×1,25 |
 | 2 | Ombres +20 % PV |
 | 3 | Reliques +1 or |
-| 4 | Ligne d'horizon −16 px (y = 396) |
+| 4 | Ligne d'horizon −16 px (y = 468 ; 492 avec Verre soufflé, borne basse de §4) |
 | 5 | 5 tirs par nuit |
 | 6 | Pas de Bougie de secours, intérêts plafonnés à 3 |
 | 7 | +1 apparition d'Ombre par tir |
@@ -652,7 +672,8 @@ Chaque symbole représente une nuit et donne sa plus grosse fusion (table §5.2)
 - `bde.v1.meta` :
   `{v:1, fragments, rooms:[ids], gardiens:[ids], eclipses:{gardienId:niveauMaxDébloqué}, defis:{id:{done,progress}}, grimoire:{relics:[], reactions:{id:count}, evolutions:[], ombres:[], hintsSeen:[]}, stats:{runs, wins, kills, merges, bestShot, bestTotal}, daily:{date, officialScore, best, history:[{date,score,grid}]}, settings:{sfx:0.8, music:0.5, shake:true, flash:true, colorblind:false, textScale:1, eco:false, aim:"abs", assistAim:false, vibrate:true}, flags:{tutoAim, tutoMerge, tutoShadow, tutoQuota}}`
 - `bde.v1.run` (null s'il n'y a pas de run en cours) :
-  `{v:1, seed, streams:{bag,shop,waves,pegs,misc}, daily:false, gardien, eclipse, lune, nuit, shotIndex, shotsLeft, total, quota, gold, candle, swapsLeft, reserve, metronome, bag:[{id,size,color,grav}], draw:[ids], nextSizeBonus, relics:[{id,evolved}], reactionCounts:{}, clous:{A..F}, pegLayout, ronce:[pegIdx], jar:[{id,size,color,stone,x,y}], shadows:[{type,col,row,hp,maxhp,counter,burn,frozen}], boss:{...}|null, ghostQueue:[...], phase:"AIM"|"SHOP"|"PENDING_SHOT", pendingAngle, shop:{offers,locked,rerollCost,pack}, runStats:{...}, nightBest:[[]]}`
+  `{v:2, seed, streams:{bag,shop,waves,pegs,misc}, daily:false, gardien, eclipse, lune, nuit, shotIndex, shotsLeft, total, quota, gold, candle, swapsLeft, reserve, metronome, bag:[{id,size,color,grav}], draw:[ids], nextSizeBonus, relics:[{id,evolved}], reactionCounts:{}, clous:{A..F}, pegLayout, ronce:[pegIdx], jar:[{id,size,color,stone,x,y}], shadows:[{type,col,row,hp,maxhp,counter,burn,frozen}], boss:{...}|null, ghostQueue:[...], phase:"AIM"|"SHOP"|"PENDING_SHOT", pendingAngle, shop:{offers,locked,rerollCost,pack}, runStats:{...}, nightBest:[[]]}`
+- **Version du run** : `v:2` depuis le bocal étroit (v1.1). Un run `v:1` (bocal large de la v1.0 : murs 16 / 344, rayons 14…62) reste accepté et est **migré** à la reprise : murs du bocal courants (L'Étau compris), rayon et masse de chaque corps selon §5.2, tassement silencieux (fusions → réserve), puis le trop-plein s'évapore. La même migration corrige un corps dont le rayon ne correspond plus à la table §5.2.
 - **Moments d'écriture :** entrée en phase AIM, lâcher d'un tir (`phase:"PENDING_SHOT"` avec `pendingAngle`), chaque action de boutique, fin de run (on écrit la méta, puis on met le run à `null`).
 - En cas d'échec d'écriture (quota, navigation privée), le jeu continue normalement et affiche une petite icône « sauvegarde indisponible » dans la pause.
 
@@ -676,7 +697,7 @@ Carrousel horizontal des Gardiens (glisser ou flèches). Chaque carte montre le 
 - **Zone du Phare (44–97) :** Sac (icône et nombre restant), le Phare (anneau `#eef2ff` de rayon 22 contenant l'étoile courante dessinée à un rayon max de 18), les **pips de tirs** (6 cercles de 5 px sous le Phare, pleins = restants, dorés = tir bonus Lanterne), la Bougie, la case SUIV., et la mention « +2 en réserve » s'il y a lieu.
 - **Rangée fantôme** à y = 90.
 - **Compteur live** à y = 352 : « ✦ 24 × 3,5 » (✦ et le nombre en `--eclat`, × et le nombre en `--mult`). Pendant le décompte, c'est là que les rubans se percutent.
-- **Ligne d'horizon :** pointillés `--dim` 1 px. Elle devient `--danger` et pulse (0,8 Hz) dès qu'un corps au repos a son haut à moins de 16 px de la ligne. Indicateur de remplissage du bocal à droite de la ligne : « 38 % ».
+- **Ligne d'horizon :** pointillés `--dim` 1 px. Elle devient `--danger` et pulse (0,8 Hz) dès qu'un corps au repos a son haut à moins de 16 px de la ligne. Elle passe à l'ambre (sans son) quand l'étoile courante posée sur le tas dépasserait la ligne (§4). Jauge verticale de remplissage à droite du bocal, du fond à l'horizon, surmontée du pourcentage (« 58 % » : max surface / hauteur, §4).
 - **Bande des reliques (618–640) :** icônes 22 px. Pendant le décompte, la relique active saute (échelle 1,4) et affiche sa contribution au-dessus (« +4 » rouge, « ×2 » rouge sur fond clair, « +10 » bleu).
 
 ### 10.4 Carte d'introduction de nuit (1,2 s, un tap la saute)
@@ -691,7 +712,7 @@ Voile semi-transparent. « LUNE 2 — NUIT DU BOSS ». Pour un boss, son nom, sa
 - **Boutons :** Relancer (2 or, puis +1 à chaque relance dans la même Aube), Sac (panneau avec Épurer et les gravures), **Nuit suivante** (56 px, `--or`).
 - **Reliques :** 5 emplacements réordonnables, en bas. Un tap ouvre la fiche avec l'aperçu chiffré sur le dernier tir, et le bouton Vendre (moitié du prix, arrondi à l'inférieur, minimum 1) avec confirmation.
 - **Mini-carte du Firmament** (apparaît après l'achat d'un clou) : les 6 emplacements A à F, en treillis. Les paires possibles sont dessinées en pointillé.
-- **À la fin de la Lune :** l'écran « Vidange » (1,5 s) s'insère avant l'Aube. Le bocal se renverse doucement, les étoiles de taille ≥ 4 deviennent de l'or.
+- **À la fin de la Lune :** l'écran « Vidange » (1,5 s) s'insère avant l'Aube. Le bocal se renverse doucement, les étoiles de taille ≥ 4 deviennent de l'or. Avec L'Insomniaque, seules les étoiles qui partent tombent (« les petites étoiles s'évaporent »).
 
 ### 10.6 Pause
 
@@ -894,8 +915,8 @@ CHECK → RUN_LOST | RUN_WON → RUN_END → TITLE
 
 ```js
 {id:"R14", nom:"Balance", rar:"PC", tags:["xMULT","BOCAL"], hook:"count",
- txt:"×2 Mult si le bocal est rempli à moins de 40 %",
- count: c => c.jarFill < 0.40 ? {xMult:2} : null}
+ txt:"×2 Mult si le bocal est rempli à moins de 50 %",
+ count: c => c.jarFill < 0.50 ? {xMult:2} : null}
 ```
 
   Hooks possibles : `count(ctx)`, `flight:{restPeg, dmgBonus, onLaunch}`, `passive:{interestCap, swaps, horizon, previewContacts}`. `BE.Run` agrège les passifs à chaque changement de reliques.
@@ -949,10 +970,12 @@ CHECK → RUN_LOST | RUN_WON → RUN_END → TITLE
 | Victoire (Lune 5) | 15 à 25 % |
 | Tirs moyens par nuit gagnée | 4,2 ± 1 |
 | Défaites par Débordement | 15 à 35 % du total |
-| Remplissage moyen en fin de Nuit du Boss | 55 à 75 % |
+| Remplissage moyen en fin de Nuit du Boss (Σ aires / capacité, §4) | 55 à 75 % |
 | Or moyen dépensé par run | 90 à 130 |
 | Durée simulée d'un run gagné (temps réel estimé) | 10 à 14 min |
-| Big Bang | < 3 % des runs (sauf avec l'Insomniaque : 10 à 20 %) |
+| Big Bang | < 3 % des runs (Insomniaque : cible 10 à 20 % **suspendue** en v1.1 — le bocal de 200 px ne loge pas deux Trous Noirs de 132 px ; mesurée, affichée N/A) |
+
+**Accueil (v1.1)** : le bot `random` (visée uniforme) doit réussir la Lune 1 dans **≥ 60 %** des runs (400 runs). Chaque Gardien doit rester gagnable et non trivial au bot `greedy` (200 runs, victoire entre ≈ 5 et 40 %).
 
 **Leviers à ajuster, dans cet ordre :** quotas (§6.1) → rayons des tailles (pression du bocal) → HPmult → apparitions par tir → valeurs de Mult des fusions → prix. On ne modifie qu'un seul levier par itération, puis on relance les 500 runs.
 

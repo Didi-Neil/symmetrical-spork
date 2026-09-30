@@ -17,7 +17,7 @@
     const v = PF.v0 * (opts.speedMul || 1);
     return {
       id: spec.id, size: spec.size, color: spec.color, grav: spec.grav || null, bagId: spec.bagId,
-      r: D.SIZES[spec.size].r,
+      r: D.SIZES[spec.size].rf,
       x: opts.x !== undefined ? opts.x : D.GEOM.phare.x, y: opts.y !== undefined ? opts.y : D.GEOM.phare.y,
       vx: Math.cos(a) * v, vy: Math.sin(a) * v,
       alive: true, exited: false, absorbed: false,
@@ -48,6 +48,32 @@
     return 2;
   }
   Phys.collideStatic = collideStatic;
+
+  /** Collision contre un segment statique (a→b) : point le plus proche puis collideStatic (rayon nul). */
+  function collideSeg(s, ax, ay, bx, by, e) {
+    const dx = bx - ax, dy = by - ay;
+    let u = ((s.x - ax) * dx + (s.y - ay) * dy) / (dx * dx + dy * dy);
+    u = u < 0 ? 0 : u > 1 ? 1 : u;
+    return collideStatic(s, ax + u * dx, ay + u * dy, 0, e);
+  }
+  /**
+   * Entonnoir (§4) : épaules du mur du ciel (wl, y0) au col du bocal (L, y1), puis murs verticaux du bocal jusqu'au fond.
+   * F = {wl, wr, L, R, y0, y1, bot, e}. Les épaules ne comptent pas comme rebonds sur un mur (pas d'Éclat).
+   */
+  function collideFunnel(s, F) {
+    if (s.y + s.r < F.y0) return;
+    collideSeg(s, F.wl, F.y0, F.L, F.y1, F.e);
+    collideSeg(s, F.L, F.y1, F.L, F.bot, F.e);
+    collideSeg(s, F.wr, F.y0, F.R, F.y1, F.e);
+    collideSeg(s, F.R, F.y1, F.R, F.bot, F.e);
+  }
+  /** L'étoile peut quitter le vol : sous exitY et entièrement dans le col du bocal. */
+  function canExit(world, s) {
+    if (s.y <= world.exitY) return false;
+    const F = world.funnel;
+    return !F || (s.x - s.r >= F.L - 0.5 && s.x + s.r <= F.R + 0.5);
+  }
+  Phys.canExit = canExit;
 
   function minSpeed(s) {
     const sp = Math.hypot(s.vx, s.vy);
@@ -127,8 +153,9 @@
           }
         }
       }
+      if (world.funnel) collideFunnel(s, world.funnel);
       clampSpeed(s);
-      if (s.alive && s.y > world.exitY) {
+      if (s.alive && canExit(world, s)) {
         s.exited = true;
         if (H.exit) H.exit(s);
       }
@@ -163,6 +190,7 @@
         const o = world.targets[k]; if (!o.alive) continue;
         if (collideStatic(s, o.x, o.y, o.r, PF.eShadow) === 2) { minSpeed(s); hit = true; }
       }
+      if (world.funnel) collideFunnel(s, world.funnel);
       clampSpeed(s);
       if ((step & 1) === 0 || hit) pts.push(s.x, s.y);
       if (hit && tailFrom < 0) {
@@ -170,7 +198,7 @@
         if (contacts.length >= maxContacts) tailFrom = pts.length / 2 - 1;
       }
       if (tailFrom >= 0 && --tailLeft <= 0) break;
-      if (s.y > world.exitY) break;
+      if (canExit(world, s)) break;
     }
     return { pts, contacts, tailFrom };
   };

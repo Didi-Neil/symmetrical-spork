@@ -325,7 +325,7 @@
     if (run.shotIndex <= 2) Meta.completeDefi("D05");
     let fill = 1;
     try { fill = BE.Jar.fill(run); } catch (err) { /* */ }
-    if (fill < 0.25) Meta.completeDefi("D02");
+    if (fill < 0.35) Meta.completeDefi("D02"); // jauge max(surface, hauteur), §4 : ≈ 8 % des nuits gagnées (bot greedy)
   });
   function scanEvolutions(run) {
     if (!run || !run.relics) return;

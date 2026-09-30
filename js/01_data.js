@@ -12,12 +12,14 @@
     bagBtn: { x: 60, y: 62 },
     swapBtn: { x: 300, y: 62 },
     pauseBtn: { x: 336, y: 22 },
-    wallL: 16, wallR: 344,
-    etauL: 36, etauR: 324,
+    wallL: 16, wallR: 344,          // murs du Firmament (vol)
+    jarL: 80, jarR: 280,            // murs du bocal (plus étroit que le ciel : entonnoir entre les deux)
+    etauL: 96, etauR: 264,          // L'Étau : murs du bocal resserrés
+    funnelY: 330, rimY: 385,        // épaules de l'entonnoir : du mur du ciel (y=funnelY) au col du bocal (y=rimY)
     ceil: 44,
     flightToJar: 340,
     liveY: 352,
-    horizon: 380,
+    horizon: 452,
     floor: 616,
     relicBandY: 618,
     relicX: [84, 132, 180, 228, 276],
@@ -31,10 +33,12 @@
     /** Emplacements spéciaux → index de clou (r*5+c). */
     slots: { A: 1, B: 3, C: 7, D: 11, E: 13, F: 17 },
     slotPairs: [["A", "C"], ["B", "C"], ["C", "D"], ["C", "E"], ["D", "F"], ["E", "F"]],
-    jarArea: 77408,
+    packing: 0.6,                   // compacité d'un tas d'étoiles au repos : capacité = jarArea × 0,6 (100 % ≈ débordement)
     aimMin: 12, aimMax: 168,
     bossR: 40,
   };
+  /** Surface utile du bocal (sous l'horizon) : (jarR − jarL) × (floor − horizon). */
+  D.GEOM.jarArea = (D.GEOM.jarR - D.GEOM.jarL) * (D.GEOM.floor - D.GEOM.horizon);
 
   // ================================================================ Physique (§5)
   D.PHYS = {
@@ -43,7 +47,7 @@
     flight: {
       v0: 560, filante: 1.35, g: 650, vmax: 900,
       ePeg: 0.78, eSeve: 0.95, eLestee: 0.35, eRessort: 1.25,
-      eShadow: 0.7, eWall: 0.85, tangent: 0.98, vminHit: 140, cooldown: 0.12,
+      eShadow: 0.7, eWall: 0.85, eFunnel: 0.3, tangent: 0.98, vminHit: 140, cooldown: 0.12,
       ignoreAfter: 14,
     },
     jar: {
@@ -51,23 +55,27 @@
       beta: 0.6, slop: 0.3, sleepV: 6, sleepT: 0.4, wakeV: 30, restMax: 6, vEnter: 600, maxBodies: 60,
       stoneMass: 1.5, mergeMinAge: 2,
     },
-    speed: { auto2: 3.5, auto3: 5.5, hold: 3, cap: 4, countHold: 4 },
+    speed: { auto2: 2, auto3: 3.5, hold: 3, cap: 4, countHold: 4 },
     previewSteps: 240,
   };
 
   // ================================================================ Étoiles (§5.2)
   D.SIZES = [
     null,
-    { size: 1, nom: "Poussière", r: 14, mult: 0, emoji: "▫️" },
-    { size: 2, nom: "Étincelle", r: 19, mult: 1, emoji: "▫️" },
-    { size: 3, nom: "Astre", r: 25, mult: 2, emoji: "⭐" },
-    { size: 4, nom: "Soleil", r: 32, mult: 3, emoji: "🌟" },
-    { size: 5, nom: "Géante", r: 40, mult: 5, emoji: "🟠" },
-    { size: 6, nom: "Nova", r: 50, mult: 8, emoji: "💥" },
-    { size: 7, nom: "Trou Noir", r: 62, mult: 13, emoji: "🕳️" },
+    // r : rayon dans le bocal (taille « réelle », sprites) ; rf : rayon en vol (le Firmament est loin, le verre grossit)
+    { size: 1, nom: "Poussière", r: 20, rf: 14, mult: 0, emoji: "▫️" },
+    { size: 2, nom: "Étincelle", r: 25, rf: 19, mult: 1, emoji: "▫️" },
+    { size: 3, nom: "Astre", r: 31, rf: 25, mult: 2, emoji: "⭐" },
+    { size: 4, nom: "Soleil", r: 38, rf: 32, mult: 3, emoji: "🌟" },
+    { size: 5, nom: "Géante", r: 46, rf: 40, mult: 5, emoji: "🟠" },
+    // Nova / Trou Noir aplatis (v1.1b) : un Trou Noir tient à côté d'un Astre, et au fond sous l'horizon le plus bas (492)
+    { size: 6, nom: "Nova", r: 50, rf: 50, mult: 8, emoji: "💥" },
+    { size: 7, nom: "Trou Noir", r: 58, rf: 58, mult: 13, emoji: "🕳️" },
   ];
   D.MAX_LAUNCH_SIZE = 5;
   D.MAX_SIZE = 7;
+  /** Horizon le plus bas possible (§4) : un Trou Noir posé au fond garde 8 px de marge sous la ligne (616 − 116 − 8 = 492). */
+  D.GEOM.horizonMax = D.GEOM.floor - 2 * D.SIZES[7].r - 8;
   D.BIGBANG = { xMult: 10, emoji: "🌌" };
   D.ALCHIMISTE_TN = 21;
 
@@ -150,7 +158,7 @@
   D.HP_MULT = [1, 1.0, 1.6, 2.4, 3.4, 4.6];
   D.hpMult = (L) => (L <= 5 ? D.HP_MULT[L] : 4.6 * Math.pow(1.35, L - 5));
   // Quotas réglés au bot greedy (§13.3, méta neuve) — voir docs/ARCHITECTURE.md §16.3. Référence GDD §6.1 : 80, 260, 850, 2 800, 9 000.
-  D.QUOTA_BASE = [0, 120, 700, 1300, 2700, 3000];
+  D.QUOTA_BASE = [0, 200, 800, 1300, 2500, 2550];
   D.NIGHT_FACTOR = [1, 1.5, 2];
   D.NIGHT_NAMES = ["Nuit Mince", "Nuit Pleine", "Nuit du Boss"];
   D.NIGHT_SHORT = ["MINCE", "PLEINE", "BOSS"];
@@ -195,6 +203,7 @@
     relicPrice: { C: 4, PC: 6, R: 8, L: 10 },
     reroll: 2,
     shotsPerNight: 6,
+    lune1Grace: 2,       // Lune 1 : +2 tirs d'apprentissage par nuit (hors Éclipse 5), sans or s'ils restent inutilisés
     swaps: 1,
     relicSlots: 5,
     bagMax: 20, bagMin: 6, purge: 2,
@@ -268,8 +277,8 @@
       txt: "+4 Mult par fusion de taille ≥ 4 ce tir", src: { type: "defi", id: "D01" },
       count: (c) => { const n = c.merges.filter((m) => m.size >= 4).length; return n ? { dMult: 4 * n } : null; } }),
     R({ id: "R14", nom: "Balance", rar: "PC", hook: "C", tags: ["xMULT", "BOCAL"], icon: "balance", color: "#ff4d5e",
-      txt: "×2 Mult si le bocal est rempli à moins de 40 %", src: { type: "defi", id: "D02" },
-      count: (c) => (c.jarFill < 0.4 ? { xMult: 2 } : null) }),
+      txt: "×2 Mult si le bocal est rempli à moins de 50 %", src: { type: "defi", id: "D02" },
+      count: (c) => (c.jarFill < 0.5 ? { xMult: 2 } : null) }),
     R({ id: "R15", nom: "Alchimiste", rar: "PC", hook: "V", tags: ["PURE", "MULT"], icon: "alchimiste", color: "#ff4d5e",
       txt: "Les fusions pures donnent le Mult d'une taille au-dessus (Trou Noir : +21)", src: { type: "defi", id: "D03" }, passive: { alchimiste: true } }),
     R({ id: "R16", nom: "Vitrail", rar: "PC", hook: "C", tags: ["MULT", "RÉACTION"], icon: "vitrail", color: "#ff4d5e",
@@ -328,8 +337,8 @@
       count: (c) => { const n = c.merges.filter((m) => m.size >= 4).length; return n ? { dMult: 4 * n } : null; } }),
     R({ id: "E2", nom: "Équilibre", rar: "L", hook: "C", tags: ["xMULT", "BOCAL"], icon: "balance", color: "#dfe8ff",
       base: "R14", reaction: "vapeur", src: { type: "room", id: "laboratoire" }, evo: true,
-      txt: "×3 Mult si le bocal est rempli à moins de 50 %", hint: "La vapeur allège les plateaux.",
-      count: (c) => (c.jarFill < 0.5 ? { xMult: 3 } : null) }),
+      txt: "×3 Mult si le bocal est rempli à moins de 60 %", hint: "La vapeur allège les plateaux.",
+      count: (c) => (c.jarFill < 0.6 ? { xMult: 3 } : null) }),
     R({ id: "E3", nom: "Queue d'Aurore", rar: "L", hook: "C", tags: ["ÉCLAT", "xMULT", "REBOND"], icon: "comete", color: "#d8ff6a",
       base: "R02", reaction: "photosynthese", src: { type: "room", id: "laboratoire" }, evo: true,
       txt: "+3 Éclat et ×1,1 Mult par rebond sur un mur (max ×3)", hint: "La comète rêve de faire pousser la lumière.",
@@ -377,18 +386,19 @@
 
   // ================================================================ Gardiens (§6.6)
   const BASE_RULES = { relicSlots: 5, shots: 6, swaps: 1, candle: 1, interest: true, previewNext: 1,
-    noMixed: false, pureMult: 1.5, goldPerKill: 0, relicDiscount: 0, keepJar: false, finalX: 1, startStones: [] };
+    noMixed: false, pureMult: 1.5, goldPerKill: 0, relicDiscount: 0, keepJar: false, keepJarMin: 0, candleRelit: false, finalX: 1, startStones: [] };
   D.GARDIENS = [
     { id: "veilleuse", nom: "La Veilleuse", color: "#ffd166", bag: "standard", unlock: null,
       txt: ["Standard : 5 reliques, 6 tirs par nuit.", "1 échange par nuit, 1 Bougie de secours."], rules: Object.assign({}, BASE_RULES) },
     { id: "astronome", nom: "L'Astronome", color: "#4fb3ff", bag: "standard", unlock: { defi: "D09" },
       txt: ["Voit les 3 étoiles suivantes, 2 échanges.", "Seulement 4 emplacements de relique."], rules: Object.assign({}, BASE_RULES, { relicSlots: 4, swaps: 2, previewNext: 3 }) },
     { id: "forgeronne", nom: "La Forgeronne", color: "#ff6b3d", bag: "forgeronne", unlock: { defi: "D10" },
-      txt: ["Pas de fusion mixte ni de réaction.", "Fusions pures : Mult ×2."], rules: Object.assign({}, BASE_RULES, { noMixed: true, pureMult: 2 }) },
+      txt: ["Pas de fusion mixte ni de réaction.", "Fusions pures : Mult ×2. 2 Bougies."], rules: Object.assign({}, BASE_RULES, { noMixed: true, pureMult: 2, candle: 2 }) },
     { id: "glaneuse", nom: "La Glaneuse", color: "#6ee07a", bag: "standard", unlock: { defi: "D11" },
       txt: ["Pas d'intérêts. +1 or par Ombre tuée.", "Reliques −1 or."], rules: Object.assign({}, BASE_RULES, { interest: false, goldPerKill: 1, relicDiscount: 1 }) },
     { id: "insomniaque", nom: "L'Insomniaque", color: "#c7a6ff", bag: "standard", unlock: { defi: "D12" },
-      txt: ["Le bocal n'est jamais vidé. Mult final ×1,5.", "Commence avec 2 Pierres Noires."], rules: Object.assign({}, BASE_RULES, { keepJar: true, finalX: 1.5, startStones: [2, 2] }) },
+      txt: ["Bocal gardé (Soleils et +). Mult final ×1,3.", "2 Pierres au départ. Bougie à chaque Lune."],
+      rules: Object.assign({}, BASE_RULES, { keepJar: true, keepJarMin: 4, candleRelit: true, finalX: 1.3, startStones: [2, 2] }) },
   ];
   D.GARDIEN_BY_ID = {};
   D.GARDIENS.forEach((g) => (D.GARDIEN_BY_ID[g.id] = g));
@@ -413,7 +423,7 @@
   ];
   D.DEFIS = [
     { id: "D01", txt: "Fusionner un Soleil (taille 4)", reward: "Télescope" },
-    { id: "D02", txt: "Gagner une nuit avec le bocal rempli à moins de 25 %", reward: "Balance" },
+    { id: "D02", txt: "Gagner une nuit avec la jauge du bocal sous 35 %", reward: "Balance" },
     { id: "D03", txt: "3 fusions pures dans un même tir", reward: "Alchimiste" },
     { id: "D04", txt: "Briser 3 Pierres Noires dans un même tir", reward: "Carrière" },
     { id: "D05", txt: "Gagner une nuit en 2 tirs ou moins", reward: "Sablier" },

@@ -117,7 +117,20 @@
   /** Nombre flottant (« +1 » bleu 10 px qui monte de 14 px en 400 ms…). o : {life, rise, bg, vx, weight} */
   FX.float = function (x, y, text, color, size, o) {
     o = o || {};
+    if (o.stack) {
+      // empilement : un nombre récent (< 0,45 s) au même endroit pousse le nouveau au-dessus (« +1+1 », « +5 +2 »)
+      const step = Math.round(size || 12) + 3;
+      for (let guard = 0; guard < 6; guard++) {
+        let hit = false;
+        for (const q of floats.items) {
+          if (!q.alive || !q.stack || q.max - q.life > 0.45) continue;
+          if (Math.abs(q.x - x) < 26 && Math.abs(q.y - y) < step - 1) { y = q.y - step; hit = true; }
+        }
+        if (!hit) break;
+      }
+    }
     const f = floats.spawn();
+    f.stack = !!o.stack;
     f.x = x; f.y = y; f.text = text; f.color = color || "#fff"; f.size = Math.round(size || 12);
     f.max = f.life = o.life || 0.4 + (f.size > 12 ? 0.35 : 0);
     f.rise = o.rise !== undefined ? o.rise : 14; f.bg = o.bg || null; f.w = -1;
@@ -152,10 +165,17 @@
     b.x1 = x1; b.y1 = y1; b.x2 = x2; b.y2 = y2; b.color = color || "#fff"; b.w = w || 8; b.max = b.life = dur || 0.4;
   };
   /** Bannière. icon : id de réaction (dessinée par BE.Render.drawReactionIcon). */
-  FX.banner = function (text, x, y, color, size, dur, sub, icon) {
+  FX.banner = function (text, x, y, color, size, dur, sub, icon, o) {
     const b = banners.spawn();
     b.text = text; b.x = x; b.y = y; b.color = color || "#fff"; b.size = Math.round(size || 20); b.max = b.life = dur || 1;
     b.sub = sub || ""; b.icon = icon || null; b.w = -1;
+    b.minX = o && o.minX !== undefined ? o.minX : 0; b.maxX = o && o.maxX !== undefined ? o.maxX : D.W; b.kind = (o && o.kind) || "";
+    return b;
+  };
+  /** Bannière avec sous-titre encore lisible (la pastille ×3 et les indices s'effacent devant elle). */
+  FX.bannerWithSub = function () {
+    for (const b of banners.items) if (b.alive && b.sub && b.life > 0.15) return true;
+    return false;
   };
   /** Secousse (amplitude px, durée s). La plus forte l'emporte. */
   FX.shake = function (amp, dur) {
@@ -475,7 +495,9 @@
       g.font = font(900, b.size);
       if (b.w < 0) b.w = g.measureText(b.text).width + (b.icon ? b.size * 1.3 : 0);
       const half = b.w / 2 + 8;
-      const x = U.clamp(b.x, half, D.W - half);
+      // bornes : l'écran, et pour les réactions les murs du bocal (jamais sur la jauge de remplissage)
+      const lo = Math.max(half, b.minX + b.w / 2), hi = Math.min(D.W - half, b.maxX - b.w / 2);
+      const x = lo <= hi ? U.clamp(b.x, lo, hi) : (lo + hi) / 2;
       const y = b.y - k * 10;
       // plaque sombre douce : la bannière reste lisible au-dessus des Ombres, badges et étoiles
       {
@@ -535,10 +557,11 @@
   function fam(c) { return (D.FAMILIES[c] && D.FAMILIES[c].color) || "#eef2ff"; }
   function inGame() { const st = BE.state; return st && st.run && BE.Run && BE.Run.IN_GAME[st.scene]; }
 
+  const STACK = { stack: true };
   BE.on("peg", (e) => {
     const special = e.peg && e.peg.kind === "special" && e.peg.clou;
-    if (e.eclat > 0) FX.float(e.x, e.y - 9, "+" + e.eclat, P.eclat, e.eclat > 1 ? 11 : 10);
-    if (e.mult > 0) FX.float(e.x + 8, e.y - 20, "+" + e.mult, P.mult, 11);
+    if (e.eclat > 0) FX.float(e.x, e.y - 9, "+" + e.eclat, P.eclat, e.eclat > 1 ? 11 : 10, STACK);
+    if (e.mult > 0) FX.float(e.x + 8, e.y - 20, "+" + e.mult, P.mult, 11, STACK);
     if (e.dark) { FX.burst(e.x, e.y, 3, { speed: 40, color: P.pegOff, kind: 3, size: 3, life: 0.4, g: -20 }); return; }
     FX.burst(e.x, e.y, 3, { speed: 80, color: "#e6ecff", life: 0.25, size: 1.2, glow: true, kind: 5 });
     if (special) {
@@ -605,7 +628,7 @@
     FX.ring(e.x, e.y, r, r * 2, e.pure ? "#ffffff" : col, 0.25, 2.5, e.size >= 4);
     if (e.mult > 0) {
       FX.float(e.x, e.y - r - 6, "+" + U.fmtDec(e.mult) + (e.orphan ? " réserve" : ""), P.mult, Math.min(16, 11 + e.size * 0.8),
-        { life: 0.85, rise: 18, weight: 900 });
+        { life: 0.85, rise: 18, weight: 900, stack: true });
     }
     if (e.body) e.body.squashT = now();
     const big = e.size >= 5;
@@ -625,8 +648,15 @@
   });
   BE.on("reaction", (e) => {
     const R = D.REACTIONS[e.id];
-    const y = Math.max(372, e.y - 34);
-    FX.banner(e.nom.toUpperCase(), e.x, y, e.color, 17, 1.2, "", e.id);
+    // réactions en chaîne : chaque bannière encore lisible repousse la nouvelle d'une ligne vers le haut
+    let y = Math.max(372, e.y - 34);
+    for (let guard = 0; guard < 6; guard++) {
+      let hit = false;
+      for (const q of banners.items) if (q.alive && q.kind === "reaction" && q.life > 0.2 && Math.abs(q.y - y) < 23) { y = q.y - 24; hit = true; }
+      if (!hit) break;
+    }
+    const J = BE.state && BE.state.run && BE.state.run.jar;
+    FX.banner(e.nom.toUpperCase(), e.x, y, e.color, 17, 1.2, "", e.id, { kind: "reaction", minX: J ? J.wallL - 8 : 0, maxX: J ? J.wallR - 4 : D.W });
     FX.beam(e.x, e.y, e.x, y + 10, e.color, 6, 0.45);
     FX.ring(e.x, e.y, 10, 72, e.color, 0.45, 3, true);
     FX.burst(e.x, e.y, 14, { speed: 170, color: e.color, life: 0.6, size: 2, glow: true });
@@ -733,7 +763,9 @@
     FX.sparkle(e.x, e.y, 3, "#ffffff", 40, 0.6);
   });
   BE.on("devour", (e) => { FX.banner("DÉVORÉE", e.x, e.y - 20, "#ff7a9a", 16, 1); FX.ring(e.x, e.y, 44, 2, "#ff7a9a", 0.4, 3, true); FX.shake(2, 0.2); });
-  BE.on("candle", () => { FX.banner("LA BOUGIE S'ÉTEINT", 180, 360, P.or, 18, 1.8, "Les étoiles au-dessus de l'horizon s'évaporent"); FX.flash(0.3, P.or); });
+  // dans le ciel (comme « BOSS VAINCU ») : ni la pastille ×3 ni l'indice « Maintiens » ne la recouvrent
+  BE.on("candle", () => { FX.banner("LA BOUGIE S'ÉTEINT", 180, 300, P.or, 18, 1.8, "Les étoiles au-dessus de l'horizon s'évaporent"); FX.flash(0.3, P.or); });
+  BE.on("trim", (e) => { FX.banner("TROP-PLEIN ÉVAPORÉ", 180, 300, "#dfe6ff", 16, 1.6, "Le quota éteint ce qui dépasse l'horizon"); });
   BE.on("squeeze", () => { FX.shake(2, 0.3); });
   BE.on("horloge", () => { FX.banner("L'HORLOGE RETIENT LES OMBRES", 180, 150, P.frag, 13, 1.3); });
   BE.on("lay", (e) => { if (e.from && e.to) FX.beam(e.from.x, e.from.y, e.to.x, e.to.y, P.ombreLine, 3, 0.3); });

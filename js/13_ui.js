@@ -502,6 +502,8 @@
   }
   function fakeShadow(type, x, y, r, bossId) { return { type, id: 7 + x, r, dispX: x, dispY: y, bossId, hp: 1, counter: 1 }; }
 
+  /** Première nuit de la Lune 2 d'un run qui a eu des tirs d'apprentissage : on dit pourquoi il y a 2 tirs de moins. */
+  function introGraceEnd(run) { return run.lune === 2 && run.nuit === 0 && run.eclipse < 5 && !run.nuitBlanche && (D.ECO.lune1Grace || 0) > 0; }
   SCREENS.NIGHT_INTRO = function (st, run) {
     const k = st.sceneT;
     const total = D.FX.introCard + (run.nuit === 2 ? 0.6 : 0) + UI.introExtra();
@@ -514,7 +516,7 @@
     const lb = run.nuit === 0 && run.firm.bossId ? D.BOSSES[run.firm.bossId] : null;
     const lbLines = lb ? lineCount(lb.rule, 230, 10.5 * ts()) : 0;
     const hold = UI.introHold();
-    let h = 170 + (isBoss ? 104 + bossLines * 15 * ts() : 26) + (lb ? 30 + lbLines * 13 * ts() : 0) + (cards.length ? 18 + cards.length * 50 : 0) + 50;
+    let h = 170 + (isBoss ? 104 + bossLines * 15 * ts() : 26 + (introGraceEnd(run) ? 16 : 0)) + (lb ? 30 + lbLines * 13 * ts() : 0) + (cards.length ? 18 + cards.length * 50 : 0) + 50;
     h = Math.min(h, 600);
     const top = Math.round(320 - h / 2);
     g.globalAlpha = a;
@@ -542,8 +544,10 @@
       wrap(bd.rule, 180, y + 94, 270, 12 * ts(), P.text, 15 * ts());
       y += 104 + bossLines * 15 * ts();
     } else {
-      text("Disposition : " + D.LAYOUTS[run.firm.layout].nom + " · " + run.shotsLeft + " tirs", 180, y, 11, P.dim, "center", 700);
+      const gr = run.graceShots || 0;
+      fitText("Disposition : " + D.LAYOUTS[run.firm.layout].nom + " · " + run.shotsLeft + " tirs" + (gr ? " (dont " + gr + " d'apprentissage)" : ""), 180, y, 290, 11, P.dim, "center", 700);
       y += 26;
+      if (introGraceEnd(run)) { text("Fin des tirs d'apprentissage : " + run.shotsLeft + " tirs par nuit", 180, y - 8, 10, P.glass, "center", 800); y += 16; }
     }
     if (lb) {
       g.fillStyle = U.rgba(lb.color, 0.1); rr(40, y - 10, 280, 22 + lbLines * 13 * ts(), 10); g.fill();
@@ -599,9 +603,9 @@
         g.beginPath(); g.moveTo(0, G.hudH + 0.5); g.lineTo(D.W, G.hudH + 0.5); g.stroke(); g.setLineDash([]);
         // pastille près du doigt (jamais sous le Phare)
         g.globalAlpha = 0.55 + 0.45 * near;
-        const px = U.clamp(BE.Input.pointer.x, 70, 290), cy = Math.max(G.hudH + 70, py + 34);
         g.font = "800 10px " + D.FONT;
         const w = g.measureText("↑ glisse en haut pour annuler").width + 20;
+        const px = U.clamp(BE.Input.pointer.x, w / 2 + 8, D.W - w / 2 - 8), cy = Math.max(G.hudH + 70, py + 34);
         g.fillStyle = "rgba(40,10,20,0.88)"; rr(px - w / 2, cy - 11, w, 22, 11); g.fill();
         g.strokeStyle = U.rgba(P.danger, 0.7); g.lineWidth = 1; rr(px - w / 2, cy - 11, w, 22, 11); g.stroke();
         text("↑ glisse en haut pour annuler", px, cy + 0.5, 10, "#ffb3c1", "center", 800);
@@ -610,7 +614,8 @@
     }
     // accélération (§5.8) : pastille « ×3 » quand la simulation va plus vite
     const RES = BE.Run.RESOLVING[sc] || sc === "COUNT";
-    if (RES && !st.paused) {
+    const subBanner = BE.FX.bannerWithSub && BE.FX.bannerWithSub(); // « LA BOUGIE S'ÉTEINT » & co. : rien par-dessus
+    if (RES && !st.paused && !subBanner) {
       const k = BE.Run.timeScale() / (st.turbo || 1);
       UI.speedShown = U.approach(UI.speedShown || 1, k, 12, st.frameDt || 0.016);
       if (k > 1.01 || UI.speedShown > 1.05) {
@@ -646,10 +651,14 @@
     } else UI.speedShown = 1;
     // indices discrets des premiers tirs : « maintiens pour accélérer », « touche pour passer »
     if (BE.Run.RESOLVING[sc] && BE.Input.isHeld() && st.meta && st.meta.flags && !st.meta.flags.usedHold) st.meta.flags.usedHold = true; // appris : l'indice ne revient plus
-    if (run.runStats && run.runStats.shots <= 3 && !st.paused && st.meta && st.meta.stats && (st.meta.stats.runs || 0) === 0) {
+    if (run.runStats && run.runStats.shots <= 3 && !st.paused && !subBanner && st.meta && st.meta.stats && (st.meta.stats.runs || 0) === 0) {
       let hint = null;
-      const high = BE.Jar.topY && BE.Jar.topY(run) < G.liveY + 60; // bocal presque plein : l'indice gênerait
-      if (BE.Run.RESOLVING[sc] && st.play.shot && st.play.shot.t > 1.2 && !BE.Input.isHeld() && !st.meta.flags.usedHold && !high) hint = BE.Input.isTouch() ? "Maintiens le doigt pour accélérer" : "Maintiens F pour accélérer";
+      // l'indice (y = liveY + 46 ≈ 398) gênerait une étoile qui entre dans le col du bocal, au-dessus de l'horizon
+      const top = BE.Jar.topY && BE.Jar.topY(run);
+      const high = top !== null && top !== undefined && top < BE.Run.horizon(run) + 12;
+      // l'accélération automatique (×2 à 2 s, ×3 à 3,5 s) fait déjà le travail : l'indice n'apparaît que pour un tir
+      // encore long après le ×3 automatique (maintenir passe alors à ×4)
+      if (BE.Run.RESOLVING[sc] && st.play.shot && st.play.shot.t > D.PHYS.speed.auto3 + 0.8 && !BE.Input.isHeld() && !st.meta.flags.usedHold && !high) hint = BE.Input.isTouch() ? "Maintiens le doigt : encore plus vite" : "Maintiens F : encore plus vite";
       else if (sc === "COUNT" && run.runStats.shots <= 2 && !high) hint = BE.Input.isTouch() ? "Touche pour passer" : "Espace pour passer";
       if (hint) {
         const fs = 11 * ts();
@@ -684,6 +693,7 @@
     if (W.t > t0 + F.nightWonConvert && run.lastReward) {
       const R = run.lastReward;
       const lines = [["Nuit", R.night], ["Tirs restants (" + R.shotsLeft + ")", R.shots], ["Intérêts", R.interest]];
+      if (R.grace) lines.splice(2, 0, ["Tirs d'apprentissage (" + R.grace + ")", 0]); // Lune 1 : restés inutilisés, ils ne paient pas
       if (R.chest) lines.push(["Coffre de la Mère-Ombre", "✦"]);
       const base = W.t - t0 - F.nightWonConvert;
       const pk = U.clamp(base / 0.25, 0, 1);
@@ -715,7 +725,8 @@
     const k = U.clamp(st.sceneT / 0.3, 0, 1);
     g.globalAlpha = k;
     neon("VIDANGE", 180, 240, 30, P.givre, st.time);
-    text("Fin de la Lune " + run.lune + " : le bocal se renverse", 180, 272, 12, P.dim, "center", 700);
+    text("Fin de la Lune " + run.lune + (V && V.kept ? " : les petites étoiles s'évaporent" : " : le bocal se renverse"), 180, 272, 12, P.dim, "center", 700);
+    if (V && V.kept && !V.n) text("Soleils et plus restent au bocal (sans or)", 180, 292, 10, P.dim, "center", 700);
     if (V && V.n) {
       const kk = U.clamp((st.sceneT - 0.5) / 0.3, 0, 1);
       g.globalAlpha = kk;
@@ -1038,6 +1049,7 @@
   /** « Nuit +4 · Tirs restants +2 · Intérêts +3 » : chaque part tombe en pièce, l'une après l'autre. */
   function rewardLine(R, since) {
     const parts = [["Nuit", R.night], ["Tirs restants", R.shots], ["Intérêts", R.interest]];
+    if (R.grace) parts.splice(2, 0, ["Apprentissage", 0]); // tirs d'apprentissage inutilisés : non payés
     if (R.vidange) parts.push(["Vidange", R.vidange]);
     const fs = (parts.length > 3 ? 9.5 : 10.5) * ts();
     g.font = "800 " + fs + "px " + D.FONT;

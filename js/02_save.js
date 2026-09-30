@@ -140,7 +140,7 @@
   /** Validation structurelle d'un run sérialisé (§3.2 d'ARCHITECTURE). Renvoie null si valide, sinon la raison. */
   Save.checkRun = function (r) {
     const D = BE.DATA;
-    if (!isObj(r) || r.v !== 1) return "version";
+    if (!isObj(r) || (r.v !== 1 && r.v !== 2)) return "version"; // v1 (bocal large) : migrée par Run.migrate à la reprise
     if (typeof r.seed !== "string" || !r.seed) return "seed";
     if (!isObj(r.streams)) return "streams";
     for (const k of (BE.util && BE.util.STREAMS) || ["bag", "shop", "waves", "pegs", "misc"]) if (typeof r.streams[k] !== "number") return "stream " + k;

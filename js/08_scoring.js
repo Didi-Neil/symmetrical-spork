@@ -78,7 +78,10 @@
       c.maxJarSize = Math.max(c.maxJarSize, b.size);
     }
     c.jarCount = J.length;
-    c.jarFill = Math.min(1, area / D.GEOM.jarArea);
+    // remplissage (§4) sous l'horizon SANS reliques ; Score.effective le recalcule si une relique déplace la ligne
+    c.jarArea = area; c.jarTop = BE.Jar.pileTop(run); c.jarW = run.jar.wallR - run.jar.wallL; c.jarFloor = run.jar.floor;
+    c.jarHz = BE.Run.horizonBase(run);
+    c.jarFill = BE.Jar.fillOf(area, c.jarTop, c.jarW, c.jarFloor, c.jarHz);
     c.isLastShot = run.shotsLeft <= 0;
     c.metronome = c.merges.length ? (run.metronome || 0) + 1 : 0;
     // finaux
@@ -93,11 +96,11 @@
 
   /** Passifs « de score » d'une liste de reliques (pur). */
   Score.mods = function (relics) {
-    const m = { alchimiste: false, firstMergeTwice: false, plasmaMerge: false };
+    const m = { alchimiste: false, firstMergeTwice: false, plasmaMerge: false, horizon: 0 };
     for (const r of relics || []) {
       const d = relicDef(r);
       if (!d || !d.passive) continue;
-      for (const k in m) if (d.passive[k]) m[k] = true;
+      for (const k in m) if (k === "horizon") m.horizon += d.passive.horizon || 0; else if (d.passive[k]) m[k] = true;
     }
     return m;
   };
@@ -110,8 +113,11 @@
    */
   Score.effective = function (ctx, relics) {
     const m = Score.mods(relics);
-    if (!m.alchimiste && !m.firstMergeTwice && !m.plasmaMerge) return ctx;
+    const hz = m.horizon && ctx.jarW ? Math.min(D.GEOM.horizonMax, ctx.jarHz + m.horizon) : 0;
+    if (!m.alchimiste && !m.firstMergeTwice && !m.plasmaMerge && !hz) return ctx;
     const c = Object.assign({}, ctx);
+    // 0) Verre soufflé : la ligne descend, le remplissage lu par Balance / Équilibre aussi (comme la jauge)
+    if (hz) c.jarFill = BE.Jar.fillOf(ctx.jarArea, ctx.jarTop, ctx.jarW, ctx.jarFloor, hz);
     c.merges = ctx.merges.map((x) => Object.assign({}, x));
     if (m.alchimiste) {
       for (const x of c.merges) if (x.pure && x.alch) { c.baseMult += x.alch; x.mult += x.alch; x.alch = 0; }

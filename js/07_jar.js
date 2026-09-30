@@ -7,7 +7,7 @@
 
   /** État du bocal stocké dans run.jar (sérialisable). */
   Jar.create = function () {
-    return { bodies: [], wallL: G.wallL, wallR: G.wallR, floor: G.floor, g: PJ.g, t: 0, step: 0 };
+    return { bodies: [], wallL: G.jarL, wallR: G.jarR, floor: G.floor, g: PJ.g, t: 0, step: 0 };
   };
 
   /** Ajoute un corps (id = run.nextId++). spec: {size,color,stone,x,y,vx,vy,grav,pure} */
@@ -41,7 +41,9 @@
     let vx = star.vx, vy = star.vy;
     const sp = Math.hypot(vx, vy);
     if (sp > PJ.vEnter) { vx *= PJ.vEnter / sp; vy *= PJ.vEnter / sp; }
-    const b = Jar.add(run, { size: star.size, color: star.color, grav: star.grav, x: star.x, y: star.y, vx, vy });
+    // le verre grossit l'étoile (rayon de vol → rayon du bocal) : on la garde entre les murs du bocal
+    const r = D.SIZES[star.size].r, x = U.clamp(star.x, run.jar.wallL + r, run.jar.wallR - r);
+    const b = Jar.add(run, { size: star.size, color: star.color, grav: star.grav, x, y: star.y, vx, vy });
     b.fromShot = true;
     S.log.push({ t: "land", size: star.size });
     BE.emit("land", { body: b, x: b.x, y: b.y });
@@ -71,7 +73,7 @@
     const J = run.jar;
     J.g = PJ.g * (BE.Firm.ruleActive(run, "maree") ? D.BOSSES.maree.jarG : 1);
     const etau = BE.Firm.ruleActive(run, "etau");
-    const L = etau ? G.etauL : G.wallL, R = etau ? G.etauR : G.wallR;
+    const L = etau ? G.etauL : G.jarL, R = etau ? G.etauR : G.jarR;
     const narrowed = L > J.wallL || R < J.wallR;
     J.wallL = L; J.wallR = R;
     if (narrowed) {
@@ -85,8 +87,12 @@
    * Fusions orphelines → réserve (Mult ajouté au tir suivant, §5.5). Renvoie le Mult mis en réserve.
    */
   Jar.squeeze = function (run) {
+    BE.emit("squeeze", { wallL: run.jar.wallL, wallR: run.jar.wallR });
+    return Jar.settle(run);
+  };
+  /** Résolution silencieuse jusqu'au repos (≤ 6 s) ; les fusions qui en résultent vont dans la réserve (L'Étau, Vidange). */
+  Jar.settle = function (run) {
     const J = run.jar, OS = { log: [], orphan: true };
-    BE.emit("squeeze", { wallL: J.wallL, wallR: J.wallR });
     Phys.wakeAll(J);
     const n = Math.round(PJ.restMax / D.PHYS.dt);
     for (let i = 0; i < n; i++) {
@@ -267,12 +273,49 @@
 
   // ---------------------------------------------------------------- requêtes
   Jar.isRest = (run) => Phys.allAsleep(run.jar);
-  /** Remplissage 0–1 : Σ aires / 77 408 (§4). */
-  Jar.fill = function (run) {
+  /**
+   * Remplissage (§4) — fonction pure : max(Σ aires / capacité, hauteur du tas / hauteur utile), borné à 1.
+   *  - capacité = largeur × (fond − horizon) × compacité 0,6 d'un tas d'étoiles au repos ;
+   *  - hauteur = (fond − haut du tas) / (fond − horizon) : 100 % quand le tas touche la ligne (Débordement).
+   * Le terme « hauteur » rend la jauge honnête quand quelques grosses étoiles s'empilent sans remplir la surface.
+   */
+  Jar.fillOf = function (area, top, w, floor, h) {
+    const hh = Math.max(1, floor - h);
+    const fa = area / (Math.max(1, w) * hh * G.packing);
+    const fh = top === null || top === undefined ? 0 : (floor - top) / hh;
+    return Math.max(0, Math.min(1, Math.max(fa, fh)));
+  };
+  /** Σ aires des corps du bocal (px²). */
+  Jar.area = function (run) {
     let a = 0;
     for (const b of run.jar.bodies) a += Math.PI * b.r * b.r;
-    return Math.min(1, a / G.jarArea);
+    return a;
   };
+  /** Haut du tas pour la jauge : corps au repos ou presque (< 60 px/s) — une étoile qui tombe ne compte pas encore. */
+  Jar.pileTop = function (run) {
+    let t = null;
+    for (const b of run.jar.bodies) {
+      if (!b.sleep && b.vx * b.vx + b.vy * b.vy > 3600) continue;
+      const y = b.y - b.r;
+      if (t === null || y < t) t = y;
+    }
+    return t;
+  };
+  /** Capacité (px²) sous l'horizon h (défaut : horizon courant, Verre soufflé et Éclipse 4 compris), murs courants. */
+  Jar.capacity = function (run, h) {
+    const J = run && run.jar;
+    if (!J) return G.jarArea * G.packing;
+    if (h === undefined) h = BE.Run.horizon(run);
+    return Math.max(1, (J.wallR - J.wallL) * (J.floor - h)) * G.packing;
+  };
+  /** Remplissage 0–1 affiché par la jauge (et lu par Balance, Équilibre, D02) : 100 % = le tas touche l'horizon. */
+  Jar.fill = function (run, h) {
+    const J = run.jar;
+    if (h === undefined) h = BE.Run.horizon(run);
+    return Jar.fillOf(Jar.area(run), Jar.pileTop(run), J.wallR - J.wallL, J.floor, h);
+  };
+  /** Part surfacique seule (Σ aires / capacité), pour les mesures d'équilibrage. */
+  Jar.areaFill = function (run) { return Math.min(1, Jar.area(run) / Jar.capacity(run)); };
   /** Corps dont le haut dépasse la ligne d'horizon (à n'utiliser qu'au repos). */
   Jar.overflowing = function (run) {
     const h = BE.Run.horizon(run);
@@ -284,11 +327,23 @@
     for (const b of run.jar.bodies) { const y = b.y - b.r; if (t === null || y < t) t = y; }
     return t;
   };
-  /** Danger : un corps au repos a son haut à moins de 16 px de l'horizon (HUD pulse, battement de cœur). */
-  Jar.danger = function (run) {
-    const h = BE.Run.horizon(run);
-    for (const b of run.jar.bodies) if (b.sleep && b.y - b.r < h + 16) return true;
+  /** Danger : un corps au repos a son haut à moins de 16 px de l'horizon (ligne rouge, pouls, battement de cœur). */
+  Jar.danger = function (run) { return Jar.near(run, 16); };
+  /** Un corps au repos a son haut à moins de `margin` px de l'horizon. */
+  Jar.near = function (run, margin) {
+    const h = BE.Run.horizon(run) + margin;
+    for (const b of run.jar.bodies) if (b.sleep && b.y - b.r < h) return true;
     return false;
+  };
+  /**
+   * Niveau d'alerte à la visée (§4) : 2 = danger (rouge, < 16 px), 1 = « presque » (ambre) quand l'étoile courante,
+   * posée sur le haut du tas, dépasserait la ligne (marge = son diamètre au bocal, au moins 40 px), 0 sinon.
+   */
+  Jar.alertLevel = function (run) {
+    if (Jar.danger(run)) return 2;
+    const cur = BE.Run.current && BE.Run.current(run);
+    const m = Math.max(40, cur ? 2 * D.SIZES[cur.size].r : 40);
+    return Jar.near(run, m) ? 1 : 0;
   };
   Jar.stars = (run) => run.jar.bodies.filter((b) => !b.stone);
   Jar.colors = function (run) {
@@ -313,12 +368,51 @@
     if (best) { Jar.remove(run, best); Phys.wakeAll(run.jar); BE.emit("devour", { body: best, x: best.x, y: best.y }); }
     return best;
   };
-  /** Vidange de fin de Lune : +1 or par étoile de taille ≥ 4 (max 5). Vide le bocal (sauf keepJar). */
-  Jar.vidange = function (run) {
+  /**
+   * Corps qui quittent le bocal à la Vidange : tous, sauf keepJar (L'Insomniaque) où seules les étoiles de taille
+   * < keepJarMin s'évaporent (les Pierres Noires restent).
+   */
+  Jar.vidangeLeaving = function (run) {
+    const R = run.rules;
+    if (!R.keepJar) return run.jar.bodies.slice();
+    return R.keepJarMin ? run.jar.bodies.filter((b) => !b.stone && b.size < R.keepJarMin) : [];
+  };
+  /**
+   * Trop-plein (§2.1 étape 7, §6.6) : les corps qui dépassent encore l'horizon s'évaporent, sans Bougie ni or, puis
+   * le bocal se tasse (fusions → réserve). Utilisé quand une nuit est gagnée bocal débordant, après la Vidange partielle
+   * de L'Insomniaque et à la reprise d'une ancienne sauvegarde. Renvoie le nombre de corps évaporés.
+   */
+  Jar.trim = function (run) {
     let n = 0;
-    for (const b of run.jar.bodies) if (!b.stone && b.size >= D.ECO.vidangeMinSize) n++;
-    n = Math.min(D.ECO.vidangeMax, n);
-    if (!run.rules.keepJar) run.jar.bodies.length = 0;
+    for (let pass = 0; pass < 4; pass++) {
+      const over = Jar.overflowing(run);
+      if (!over.length) break;
+      n += over.length;
+      Jar.evaporate(run, over);
+      Jar.settle(run);
+    }
+    return n;
+  };
+  /** Or de la Vidange : +1 par étoile de taille ≥ 4 QUI QUITTE le bocal (max 5). */
+  Jar.vidangeGold = function (run) {
+    let n = 0;
+    for (const b of Jar.vidangeLeaving(run)) if (!b.stone && b.size >= D.ECO.vidangeMinSize) n++;
+    return Math.min(D.ECO.vidangeMax, n);
+  };
+  /**
+   * Vidange de fin de Lune : or (Jar.vidangeGold), puis le bocal est vidé ; keepJar : seules les petites étoiles
+   * partent, le reste se tasse en silence (fusions → réserve) et ce qui dépasse encore l'horizon s'évapore (Jar.trim).
+   * candleRelit : la Bougie se rallume.
+   */
+  Jar.vidange = function (run) {
+    const n = Jar.vidangeGold(run);
+    const gone = Jar.vidangeLeaving(run);
+    if (gone.length === run.jar.bodies.length) run.jar.bodies.length = 0;
+    else {
+      if (gone.length) { run.jar.bodies = run.jar.bodies.filter((b) => gone.indexOf(b) < 0); Jar.settle(run); }
+      Jar.trim(run);
+    }
+    if (run.rules.candleRelit && run.eclipse < 6) run.candle = Math.max(run.candle, run.rules.candle);
     return n;
   };
   /** Stabilisation silencieuse après chargement (§12.6) : 30 pas sans fusions ni journal. */

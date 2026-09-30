@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /* tools/balance.js — équilibrage (GDD §13.3) : N runs simulés par les bots headless (BE.Debug.simulate),
    répartis sur plusieurs pages Chromium en parallèle, puis tableau des mesures §13.3 (+ détail par nuit).
-   Usage : NODE_PATH=$(npm root -g) node tools/balance.js [--runs 100] [--policy greedy|random|safe]
+   Usage : NODE_PATH=$(npm root -g) node tools/balance.js [--runs 100] [--policy greedy|random|safe|noisy]
            [--gardien veilleuse] [--eclipse 0] [--shop default|random|none] [--seed BAL] [--workers 4]
-           [--all] [--rooms serre,cartes] [--csv fichier.csv] [--json fichier.json]
+           [--all] [--rooms serre,cartes] [--relics R14,R27] [--csv fichier.csv] [--json fichier.json]
    Le code de sortie vaut 1 si un run a planté (les cibles d'équilibrage ne font jamais échouer l'outil). */
 "use strict";
 process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
@@ -34,6 +34,7 @@ const opts = {
   seed: String(arg("seed", "BAL")),
   all: !!arg("all", false),
   rooms: arg("rooms", "") ? String(arg("rooms", "")).split(",").filter(Boolean) : undefined,
+  relics: arg("relics", "") ? String(arg("relics", "")).split(",").filter(Boolean) : undefined, // reliques imposées dès le départ
 };
 const WORKERS = Math.max(1, Math.min(+arg("workers", Math.min(4, os.cpus().length)), opts.runs));
 const CSV = arg("csv", "");
@@ -64,7 +65,7 @@ const JSON_OUT = arg("json", "");
       pages.push(page);
     }
     console.log("Équilibrage : " + opts.runs + " runs · bot " + opts.policy + " · boutique " + opts.shop + " · " + opts.gardien +
-      " · Éclipse " + opts.eclipse + (opts.all ? " · tout débloqué" : "") + " · " + WORKERS + " page(s)");
+      " · Éclipse " + opts.eclipse + (opts.all ? " · tout débloqué" : "") + (opts.relics ? " · reliques " + opts.relics.join(",") : "") + " · " + WORKERS + " page(s)");
     // répartition : le run i a toujours la graine seed-i, quel que soit le nombre de pages
     const per = Math.ceil(opts.runs / WORKERS);
     const jobs = pages.map((page, w) => {

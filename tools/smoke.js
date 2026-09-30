@@ -22,6 +22,7 @@ const URL = "file://" + path.join(ROOT, "index.html");
 const errors = [];
 const visited = new Set();
 let page, cdp;
+const SMOKE_SEED = process.env.SMOKE_SEED || "SMOK-0001"; // graine du run joué (surchargeable : SMOKE_SEED=XXXX-XXXX)
 
 function log(...a) { console.log("[smoke]", ...a); }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -101,14 +102,17 @@ async function reloadToTitle() {
   await sleep(700);
 }
 /** Meilleur angle (bot greedy, joué sur une copie de l'état : le run réel n'est pas touché). */
+/** Meilleur des 16 angles en Lumière ; un tir qui laisserait le bocal plein à ras (jauge ≥ 97 %) est évité
+    si un autre existe — comme un joueur qui regarde la ligne (le test ne touche jamais à la Bougie ni à l'état). */
 async function greedy() {
   return page.evaluate(() => {
     const run = window.BE.state.run;
-    let best = { a: 90, l: -1 };
+    let best = { a: 90, l: -1, s: -Infinity };
     for (let i = 0; i < 16; i++) {
       const a = 14 + i * (152 / 15);
       const r = window.BE.Debug.trial(run, a);
-      if (r.lumiere > best.l) best = { a, l: r.lumiere, fill: r.fill };
+      const sc = r.lumiere - (r.fill >= 0.97 && r.total < run.quota ? 1e9 : 0);
+      if (sc > best.s) best = { a, l: r.lumiere, fill: r.fill, s: sc };
     }
     return best;
   });
@@ -369,6 +373,8 @@ async function playNight(opts) {
     await tapRegion("next"); await sleep(600);
     await shot("select_verrouille");
     await tapRegion("prev"); await sleep(600);
+    // graine fixe : le parcours joué par le bot est reproductible (Lunes 1–2 sans Débordement avec cette graine)
+    await page.evaluate((seed) => { const U = window.BE.util; U._newSeed = U.newSeed; U.newSeed = () => { U.newSeed = U._newSeed; return seed; }; }, SMOKE_SEED);
     await tapRegion("launch");
     await waitFor((s) => s.scene === "NIGHT_INTRO", "NIGHT_INTRO");
     await sleep(500);

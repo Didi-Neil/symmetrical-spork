@@ -25,15 +25,19 @@ Jeu mobile (web, portrait) conçu à partir des qualités des jeux mobiles indé
 3. **Fusionne.** L'étoile tombe dans le bocal. Deux étoiles de même taille fusionnent et rapportent du **Mult** (rouge) ;
    deux couleurs différentes déclenchent une réaction (Vapeur, Plasma, Tempête…).
 4. **Brille.** Au décompte, tes reliques s'activent de gauche à droite, puis Lumière = Éclat × Mult s'ajoute à la
-   jauge. Atteins le **quota** de la nuit avant d'avoir épuisé tes 6 tirs.
-5. **Attention au bocal.** Il reste plein pendant les 3 nuits d'une Lune. Si un objet au repos dépasse la ligne
-   d'horizon, c'est le **Débordement** (la Bougie te sauve une fois). Les Ombres descendent quand leur compteur arrive
-   à 0 ; en bas, elles tombent dans le bocal en Pierres Noires.
+   jauge. Atteins le **quota** de la nuit avant d'avoir épuisé tes 6 tirs (8 en Lune 1 : les 2 derniers,
+   pastilles creuses bleutées, sont des tirs d'apprentissage, qui ne rapportent pas d'or s'ils restent inutilisés).
+5. **Attention au bocal.** Il est étroit et reste plein pendant les 3 nuits d'une Lune. La jauge à droite du bocal
+   monte avec la place occupée **et** avec la hauteur du tas : à 100 %, le tas touche la ligne d'horizon. La ligne
+   passe à l'**ambre** quand l'étoile que tu tiens, posée sur le tas, la dépasserait, puis au **rouge** (battement de
+   cœur) quand le tas la frôle. Si un objet au repos dépasse la ligne, c'est le **Débordement** (la Bougie te sauve
+   une fois) : fusionner, c'est aussi faire de la place. Gagner la nuit avant évapore le trop-plein. Les Ombres
+   descendent quand leur compteur arrive à 0 ; en bas, elles tombent dans le bocal en Pierres Noires.
 6. **À l'Aube** (après chaque nuit gagnée), dépense ton or : reliques, étoiles, clous spéciaux, gravures, paquet
    Constellation. Tape une relique pour voir son effet chiffré ; glisse-les pour changer leur ordre.
 7. **Gagne** en passant la Nuit du Boss de la Lune 5 (L'Éclipse). Tes Fragments ◇ allument les salles de
    l'Observatoire, qui ajoutent du contenu aux runs suivants.
 
-Astuces : maintiens le doigt pendant un tir pour l'accélérer, touche l'écran pendant le décompte pour le passer, touche
+Astuces : les tirs longs accélèrent tout seuls (×2 puis ×3) ; maintiens le doigt pour aller encore plus vite, touche l'écran pendant le décompte pour le passer, touche
 « SUIV. » pour échanger l'étoile courante avec la suivante (1 fois par nuit), et le Sac pour voir ce qu'il reste dans
 la pioche.
