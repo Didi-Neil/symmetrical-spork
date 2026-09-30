@@ -1203,6 +1203,16 @@
       assert(BE.Run.horizon(run) <= D.GEOM.horizonMax, "horizon borné");
       eq(BE.Jar.overflowing(run).length, 0, "Trou Noir sous la ligne");
       assert(BE.Jar.fill(run) < 1, "jauge < 100 %");
+      // viabilité des archétypes (§13.3) : Trou Noir + Astre, puis Nova + Géante tiennent côte à côte sur le fond
+      const pairs = [[7, 3], [6, 5]];
+      for (const [a, b] of pairs) {
+        run.jar.bodies = [];
+        const ra = D.SIZES[a].r, rb = D.SIZES[b].r;
+        BE.Jar.add(run, { size: a, color: "braise", x: run.jar.wallL + ra, y: D.GEOM.floor - ra });
+        BE.Jar.add(run, { size: b, color: "givre", x: run.jar.wallR - rb, y: D.GEOM.floor - rb });
+        BE.Jar.stabilize(run, 240);
+        eq(BE.Jar.overflowing(run).length, 0, "tailles " + a + " + " + b + " côte à côte sous la ligne");
+      }
     });
   });
   test("Débordement", "jauge = max(surface / capacité, hauteur du tas) ; 100 % quand le tas touche l'horizon", () => {

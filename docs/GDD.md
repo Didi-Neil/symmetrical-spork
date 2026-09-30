@@ -1,4 +1,4 @@
-# BOCAL D'ÉTOILES — Document de design final (GDD v1.1)
+# BOCAL D'ÉTOILES — Document de design final (GDD v1.1b)
 
 > Seul document de référence du projet. Tout ce qui n'y figure pas n'est pas dans la v1. Les valeurs chiffrées sont des valeurs de départ, à ajuster uniquement dans `data.js`.
 
@@ -9,7 +9,14 @@
 > - **Quotas redistribués** vers les Lunes 1–2 (§6.1) et **accélération automatique** plus précoce, ×2 dès 2 s et ×3 dès 3,5 s (§5.8).
 > - **Tirs d'apprentissage** : +2 tirs par nuit en Lune 1, sans or s'ils restent inutilisés (§2.2, §7.3), pour garder l'accueil aussi doux qu'en v1.0 malgré des quotas de Lune 1 plus hauts.
 > - **Gardiens** (§6.6) : L'Insomniaque ne perd à la Vidange que ses étoiles de taille < 4 et rallume sa Bougie à chaque Lune ; La Forgeronne a 2 Bougies. Cible Big Bang de l'Insomniaque suspendue (§13.3).
-> - Mesure (500 runs greedy) : 9/9 cibles §13.3, remplissage fin de Nuit du Boss ≈ 59 %, Débordement ≈ 25 % des défaites (détail : `docs/ARCHITECTURE.md` §16.3).
+> - Mesure (500 runs greedy) : 9/9 cibles §13.3, remplissage fin de Nuit du Boss ≈ 59 % (v1.1), Débordement ≈ 25 % des défaites (détail : `docs/ARCHITECTURE.md` §16.3).
+>
+> **v1.1b — lisibilité de la tension et cas limites** (revue de jeu de la v1.1) :
+> - **Jauge = max(Σ aires / capacité, hauteur du tas)** (§4) : elle ne contredit plus la ligne ; capacité calculée sous l'horizon **courant** (Verre soufflé, Éclipse 4). **Alerte à deux niveaux** : ambre quand l'étoile tenue, posée sur le tas, dépasserait la ligne ; rouge (< 16 px) inchangé.
+> - **Rayons au bocal** Nova 50 / Trou Noir 58 (au lieu de 55 / 66, §5.2) : le Trou Noir redevient atteignable ; horizon jamais sous y = 492 (§4).
+> - **« Le quota éteint le trop-plein »** (§2 étape 7) : une nuit gagnée bocal débordant évapore ce qui dépasse, sans Bougie ; la Vidange partielle de L'Insomniaque fait de même. Une nuit ne commence jamais en Débordement.
+> - L'Insomniaque : or de Vidange seulement pour les étoiles qui partent ; Mult final ×1,3 (§6.6). Balance / Équilibre / D02 recalés sur la nouvelle jauge (§8.1, §9.3). Lune 2 : quota 900 → 800, reporté sur les Lunes 4–5 (§6.1). Sauvegarde `v:2`, runs `v:1` migrés (§9.7). Tirs d'apprentissage annoncés (intro, Aube, Lune 2).
+> - Mesure finale (500 runs greedy) : 9/9 ; remplissage fin de Nuit du Boss **65,8 %** (Nuits du Boss gagnées seules 62,7 % ; 34,8 % de la surface brute), Débordement **25,9 %** des défaites, victoire 18,0 %, durée d'un run gagné 13,5 min.
 
 ---
 
@@ -426,7 +433,7 @@ Corps du bocal : masse ×1,5, restitution 0,05, ne fusionne jamais. Elle est bri
 | **L'Astronome** | Voit les 3 étoiles suivantes. 2 échanges par nuit (il peut échanger avec n'importe laquelle des 3). **4 emplacements de relique.** | Standard | Défi D09 : atteindre la Lune 3 |
 | **La Forgeronne** | Pas de fusion mixte (donc pas de réactions). **Fusions pures : Mult ×2** (au lieu de ×1,5). **2 Bougies de secours** (v1.1 : dans le bocal étroit, les étoiles de couleurs différentes qui ne fusionnent pas l'encombrent vite). | 10 étoiles de 2 couleurs : Braise 1,1,1,2,2 et Givre 1,1,1,2,2 | D10 : 15 fusions pures en un run |
 | **La Glaneuse** | **Pas d'intérêts.** +1 or par Ombre tuée. Reliques −1 or (minimum 2). | Standard | D11 : 150 Ombres tuées (cumulé) |
-| **L'Insomniaque** | **Le bocal n'est jamais vraiment vidé** : à la Vidange, seules les étoiles de taille < 4 s'évaporent ; les Soleils et plus et les Pierres Noires restent, le bocal se tasse en silence (fusions → réserve), puis ce qui dépasse encore l'horizon s'évapore (une Lune ne commence jamais en Débordement). Les étoiles gardées **ne rapportent pas l'or de la Vidange** (seules celles qui quittent le bocal paient ; une même Géante ne paie donc jamais deux fois). **Sa Bougie se rallume à chaque Vidange.** Mult final ×1,5 à chaque tir (réglage v1.0). Le run commence avec 2 Pierres Noires de taille 2 dans le bocal. (v1.1 : avec le bocal étroit, garder tout le bocal rendait le Gardien quasi injouable, ≈ 4 % de victoires.) | Standard | D12 : gagner un run |
+| **L'Insomniaque** | **Le bocal n'est jamais vraiment vidé** : à la Vidange, seules les étoiles de taille < 4 s'évaporent ; les Soleils et plus et les Pierres Noires restent, le bocal se tasse en silence (fusions → réserve), puis ce qui dépasse encore l'horizon s'évapore (une Lune ne commence jamais en Débordement). Les étoiles gardées **ne rapportent pas l'or de la Vidange** (seules celles qui quittent le bocal paient ; une même Géante ne paie donc jamais deux fois). **Sa Bougie se rallume à chaque Vidange.** Mult final ×1,3 à chaque tir (×1,5 jusqu'à la v1.1 ; v1.1b : ×1,5 rendait les Lunes 1–3 triviales, Lune 3 réussie à 83 %). Le run commence avec 2 Pierres Noires de taille 2 dans le bocal. (v1.1 : avec le bocal étroit, garder tout le bocal rendait le Gardien quasi injouable, ≈ 4 % de victoires.) | Standard | D12 : gagner un run |
 
 **Sac standard (3 couleurs, 10 étoiles) :** Braise 1,1,2 · Givre 1,1,2 · Foudre 1,1,2 · Braise 2.
 **Sac standard avec la Sève débloquée (10 étoiles) :** Braise 1,1,2 · Givre 1,1,2 · Foudre 1,2 · Sève 1,2.
@@ -973,7 +980,13 @@ CHECK → RUN_LOST | RUN_WON → RUN_END → TITLE
 | Remplissage moyen en fin de Nuit du Boss (Σ aires / capacité, §4) | 55 à 75 % |
 | Or moyen dépensé par run | 90 à 130 |
 | Durée simulée d'un run gagné (temps réel estimé) | 10 à 14 min |
-| Big Bang | < 3 % des runs (Insomniaque : cible 10 à 20 % **suspendue** en v1.1 — le bocal de 200 px ne loge pas deux Trous Noirs de 132 px ; mesurée, affichée N/A) |
+| Big Bang | < 3 % des runs (Insomniaque : cible 10 à 20 % **suspendue** depuis la v1.1 ; mesurée, affichée N/A — voir la note ci-dessous) |
+
+**Échelle du remplissage (v1.1b).** La cible 55–75 % se lit sur la **jauge** (§4 : max(Σ aires / capacité, hauteur du tas), capacité = surface utile × 0,6), pas sur la surface brute comme en v1.0 : 58 % de jauge ≈ 35 % de la surface brute sous l'horizon. `tools/balance.js` affiche les trois lectures (jauge toutes nuits, jauge des seules Nuits du Boss gagnées, part surfacique brute) ; la moyenne « toutes nuits » est tirée vers le haut par les Nuits du Boss perdues (souvent par Débordement, donc à 100 %), la valeur « nuits gagnées seules » doit rester ≥ 50 %.
+
+**Big Bang (v1.1b).** Deux Trous Noirs qui se touchent fusionnent (les fusions se font au contact, le Débordement n'est vérifié qu'au repos) : ce n'est donc pas « deux Trous Noirs ne tiennent pas sous l'horizon » qui bloque le Big Bang, mais le chemin pour y arriver — un Trou Noir (Ø 116) doit cohabiter avec les deux Novas (Ø 100) qui en feront un second. Avec les rayons v1.1b (Nova 50, Trou Noir 58), le Trou Noir redevient atteignable (≈ 3 % des runs de L'Insomniaque, quelques runs Forgeronne / Alchimiste) mais le Big Bang reste un exploit : le défi D08 et la Singularité sont des récompenses rares, c'est voulu. La cible Insomniaque 10–20 % reste suspendue.
+
+**Viabilité des archétypes (§13.5, v1.1b).** À chaque changement de géométrie du bocal on vérifie, dans un bac à sable (`BE.Debug.withRun`), que les tailles dont dépend un archétype tiennent sous l'horizon le plus bas (492) : Trou Noir seul, Trou Noir + Astre, Nova + Géante côte à côte (tests « Débordement » de `tools/test.js`). Un archétype dont la pièce maîtresse ne peut pas exister dans le bocal est du contenu mort.
 
 **Accueil (v1.1)** : le bot `random` (visée uniforme) doit réussir la Lune 1 dans **≥ 60 %** des runs (400 runs). Chaque Gardien doit rester gagnable et non trivial au bot `greedy` (200 runs, victoire entre ≈ 5 et 40 %).
 
