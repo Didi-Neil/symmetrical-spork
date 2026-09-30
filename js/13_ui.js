@@ -658,8 +658,9 @@
       const high = top !== null && top !== undefined && top < BE.Run.horizon(run) + 12;
       // indice calé sur l'accélération automatique (§5.8, D.PHYS.speed) : juste avant qu'elle ne prenne le relais
       // (« pour accélérer »), puis pour un tir encore long après le ×3 automatique (maintenir passe alors à ×4)
-      const SP = D.PHYS.speed, T = st.play.shot ? st.play.shot.t : 0;
-      const early = T > Math.max(1, SP.auto2 - 1.5) && T < SP.auto2, late = T > SP.auto3 + 0.8;
+      const SP = D.PHYS.speed, T = st.play.shot ? st.play.shot.t : 0, fl = sc === "FLIGHT";
+      const a2 = fl ? SP.auto2 : SP.jar2, a3 = fl ? SP.auto3 : SP.jar3; // seuils du vol ou du bocal (BE.Run.autoSpeed)
+      const early = T > Math.max(1, a2 - 1.5) && T < a2, late = T > a3 + 0.8;
       if (BE.Run.RESOLVING[sc] && st.play.shot && (early || late) && !BE.Input.isHeld() && !st.meta.flags.usedHold && !high) {
         hint = (BE.Input.isTouch() ? "Maintiens le doigt" : "Maintiens F") + (late ? " : encore plus vite" : " pour accélérer");
       }

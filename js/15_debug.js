@@ -328,7 +328,7 @@
       rec.simTime += dt;
       if (RES[s.scene]) {
         const T = s.play && s.play.shot ? s.play.shot.t : 0;
-        rec.estTime += dt / (T >= D.PHYS.speed.auto3 ? 3 : T >= D.PHYS.speed.auto2 ? 2 : 1);
+        rec.estTime += dt / BE.Run.autoSpeed(s.scene, T);
       }
     };
   }

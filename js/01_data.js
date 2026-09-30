@@ -56,7 +56,9 @@
       stoneMass: 1.5, mergeMinAge: 2,
       carryMargin: 16, // bocal gardé par L'Insomniaque à la Vidange : son haut reste hors de la zone rouge (§6.6)
     },
-    speed: { auto2: 2, auto3: 3.5, hold: 3, cap: 4, countHold: 4 },
+    // accélération automatique (§5.8, v1.1c) : le vol à travers les clous se joue à ×1 pendant 4 s (×2 à 4 s, ×3 à 7 s) ;
+    // une fois toutes les étoiles au bocal, l'attente du repos accélère comme avant (×2 dès 2 s, ×3 dès 3,5 s après le lâcher)
+    speed: { auto2: 4, auto3: 7, jar2: 2, jar3: 3.5, hold: 3, cap: 4, countHold: 4 },
     previewSteps: 240,
   };
 

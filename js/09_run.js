@@ -866,13 +866,20 @@
     if (sc && sc.update) sc.update(dt);
   };
 
+  /**
+   * Accélération automatique (§5.8) selon la scène et T (temps simulé depuis le lâcher) : pendant le vol (FLIGHT),
+   * ×2 dès auto2 (4 s) et ×3 dès auto3 (7 s) ; ensuite (bocal, tourelles, descente), ×2 dès jar2 (2 s), ×3 dès jar3 (3,5 s).
+   */
+  Run.autoSpeed = function (scene, T) {
+    const SP = D.PHYS.speed, fl = scene === "FLIGHT";
+    return T >= (fl ? SP.auto3 : SP.jar3) ? 3 : T >= (fl ? SP.auto2 : SP.jar2) ? 2 : 1;
+  };
   /** Facteur de vitesse de simulation (§5.8) : 1–4, × turbo (tests). */
   Run.timeScale = function () {
     const st = BE.state, S = st.play;
     let k = 1;
     if (Run.RESOLVING[st.scene] && S && S.shot) {
-      const T = S.shot.t;
-      const auto = T >= D.PHYS.speed.auto3 ? 3 : T >= D.PHYS.speed.auto2 ? 2 : 1;
+      const auto = Run.autoSpeed(st.scene, S.shot.t);
       k = BE.Input.isHeld() ? (auto > 1 ? D.PHYS.speed.cap : D.PHYS.speed.hold) : auto;
     } else if (st.scene === "COUNT" && BE.Input.isHeld()) k = D.PHYS.speed.countHold;
     const spd = (BE.settings && BE.settings.speed) || 1; // réglage « Vitesse » (13_ui)
