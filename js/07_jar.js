@@ -120,10 +120,13 @@
       if (a.stone || a.mergedStep === J.step || a.age < PJ.mergeMinAge) continue;
       for (let j = i + 1; j < B.length; j++) {
         const b = B[j];
-        if (b.stone || b.size !== a.size || b.mergedStep === J.step || b.age < PJ.mergeMinAge) continue;
+        if (b.stone || b.mergedStep === J.step || b.age < PJ.mergeMinAge) continue;
+        const bb = Jar.isBigBangPair(a, b);
+        if (b.size !== a.size && !bb) continue;
         const dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r + 1;
         if (dx * dx + dy * dy > rr * rr) continue;
-        if (noMixed && a.color !== b.color && a.grav !== "prismatique" && b.grav !== "prismatique") continue;
+        // La Forgeronne : pas de fusion mixte ; le Big Bang n'est pas une fusion (aucune réaction), il reste permis
+        if (noMixed && !bb && a.color !== b.color && a.grav !== "prismatique" && b.grav !== "prismatique") continue;
         Jar.merge(run, a, b, S);
         merged = true;
         break; // a a fusionné : on passe au suivant (les indices ont changé, on recommence prudemment)
@@ -144,10 +147,20 @@
     return m;
   };
 
+  /**
+   * Big Bang (§5.5) : un Trou Noir qui touche une étoile de taille ≥ D.BIGBANG.partner (Nova ou Trou Noir) l'avale.
+   * Deux étoiles (pas des Pierres), toutes deux ≥ partner, dont au moins un Trou Noir.
+   */
+  Jar.isBigBangPair = function (a, b) {
+    if (a.stone || b.stone) return false;
+    const p = D.BIGBANG.partner || D.MAX_SIZE;
+    return (a.size >= D.MAX_SIZE || b.size >= D.MAX_SIZE) && a.size >= p && b.size >= p;
+  };
+
   /** Fusion de deux étoiles (a.id < b.id). */
   Jar.merge = function (run, a, b, S) {
     const J = run.jar;
-    if (a.size >= D.MAX_SIZE && b.size >= D.MAX_SIZE) return Jar.bigBang(run, a, S);
+    if (Jar.isBigBangPair(a, b)) return Jar.bigBang(run, a.size >= D.MAX_SIZE ? a : b, S);
     const size = a.size + 1;
     const pure = a.color === b.color || a.grav === "prismatique" || b.grav === "prismatique";
     const color = a.color; // plus petit id = plus ancienne
@@ -258,7 +271,7 @@
     Phys.wakeAll(run.jar);
   };
 
-  /** Trou Noir + Trou Noir : tout disparaît, +Éclat = Σ tailles, ×10 final. */
+  /** Trou Noir + Nova (ou Trou Noir) : tout disparaît, +Éclat = Σ tailles, ×10 final. `at` = le Trou Noir. */
   Jar.bigBang = function (run, at, S) {
     const J = run.jar;
     let sum = 0;

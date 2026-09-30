@@ -61,8 +61,8 @@
   /** Ligne d'horizon sans les reliques (§4) : 452, +16 à l'Éclipse 4. */
   Run.horizonBase = function (run) { return G.horizon + (run.eclipse >= 4 ? 16 : 0); };
   /**
-   * Ligne d'horizon courante (§4) : 452, +24 Verre soufflé, +16 Éclipse 4 (492 au plus). Bornée à G.horizonMax : un
-   * Trou Noir seul au fond (haut à 616 − 116 = 500) reste toujours sous la ligne.
+   * Ligne d'horizon courante (§4) : 452, +24 Verre soufflé, +16 Éclipse 4 (492 au plus). Bornée à G.horizonMax : la
+   * plus grosse étoile seule au fond (Nova, haut à 616 − 100 = 516 ; Trou Noir effondré : 536) reste sous la ligne.
    */
   Run.horizon = function (run) {
     return Math.min(G.horizonMax, Run.horizonBase(run) + Run.passives(run).horizon);
@@ -223,16 +223,17 @@
   };
   /**
    * Sauvegarde v1 (bocal large de la v1.0 : murs 16/344, rayons 14…62) → v2 (§12.6) : murs du bocal courants, rayon et
-   * masse de chaque corps selon DATA.SIZES, tassement silencieux (fusions → réserve), puis le trop-plein s'évapore.
-   * Aussi appliqué si un rayon ne correspond plus aux données (sauvegarde d'une version intermédiaire).
+   * masse de chaque corps selon DATA.SIZES / DATA.massOf, tassement silencieux (fusions → réserve), puis le trop-plein
+   * s'évapore. Aussi appliqué si un rayon ou une masse ne correspond plus aux données (sauvegarde d'une version
+   * intermédiaire, p. ex. Trou Noir de 58 px d'une v1.1b → Trou Noir effondré de 40 px en v1.1c).
    * Renvoie false si rien n'a changé, sinon { trimmed : corps évaporés } (Run.resume l'annonce par un toast).
    */
   Run.migrate = function (run) {
-    const J = run.jar, PJ = D.PHYS.jar;
+    const J = run.jar;
     let changed = run.v !== 2;
     for (const b of J.bodies) {
-      const r = D.SIZES[b.size] ? D.SIZES[b.size].r : b.r;
-      if (b.r !== r) { b.r = r; b.m = r * r * (b.stone ? PJ.stoneMass : 1); b.im = 1 / b.m; changed = true; }
+      const r = D.SIZES[b.size] ? D.SIZES[b.size].r : b.r, m = D.massOf(b.size, r, b.stone);
+      if (b.r !== r || b.m !== m) { b.r = r; b.m = m; b.im = 1 / m; changed = true; }
     }
     const okL = J.wallL === G.jarL || J.wallL === G.etauL, okR = J.wallR === G.jarR || J.wallR === G.etauR;
     if (!okL || !okR) changed = true;

@@ -69,15 +69,29 @@
     { size: 3, nom: "Astre", r: 31, rf: 25, mult: 2, emoji: "⭐" },
     { size: 4, nom: "Soleil", r: 38, rf: 32, mult: 3, emoji: "🌟" },
     { size: 5, nom: "Géante", r: 46, rf: 40, mult: 5, emoji: "🟠" },
-    // Nova / Trou Noir aplatis (v1.1b) : un Trou Noir tient à côté d'un Astre, et au fond sous l'horizon le plus bas (492)
+    // Nova aplatie (v1.1b) : Nova + Géante tiennent côte à côte sur le fond
     { size: 6, nom: "Nova", r: 50, rf: 50, mult: 8, emoji: "💥" },
-    { size: 7, nom: "Trou Noir", r: 58, rf: 58, mult: 13, emoji: "🕳️" },
+    // Trou Noir effondré (v1.1c, §5.5) : il naît au diamètre de la Nova (rBorn) puis s'effondre en un disque compact
+    // et dense (masse × mk ≈ celle d'un disque de 58 px) qui coule au fond ; la place libérée rend le second Trou Noir (Big Bang) atteignable
+    { size: 7, nom: "Trou Noir", r: 40, rf: 40, rBorn: 58, mk: 2.1, mult: 13, emoji: "🕳️" },
   ];
   D.MAX_LAUNCH_SIZE = 5;
   D.MAX_SIZE = 7;
-  /** Horizon le plus bas possible (§4) : un Trou Noir posé au fond garde 8 px de marge sous la ligne (616 − 116 − 8 = 492). */
-  D.GEOM.horizonMax = D.GEOM.floor - 2 * D.SIZES[7].r - 8;
-  D.BIGBANG = { xMult: 10, emoji: "🌌" };
+  /**
+   * Horizon le plus bas possible (§4) : 492 (Verre soufflé + Éclipse 4). La plus grosse étoile posée seule au fond
+   * (Nova, Ø 100 ; le Trou Noir effondré ne fait que Ø 80) y garde au moins 8 px de marge sous la ligne.
+   */
+  D.GEOM.horizonMax = 492;
+  /** Masse d'un corps du bocal : r² (× mk pour le Trou Noir, dense ; × 1,5 pour une Pierre Noire). */
+  D.massOf = function (size, r, stone) {
+    const S = D.SIZES[size];
+    return r * r * (stone ? D.PHYS.jar.stoneMass : (S && S.mk) || 1);
+  };
+  /**
+   * Big Bang (§5.5) : un Trou Noir qui touche une étoile de taille ≥ partner l'avale. v1.1c : partner = 6, un Trou Noir
+   * qui touche une Nova suffit (Trou Noir + Trou Noir aussi, bien sûr).
+   */
+  D.BIGBANG = { xMult: 10, emoji: "🌌", partner: 6 };
   D.ALCHIMISTE_TN = 21;
 
   // ================================================================ Familles (§5.6)

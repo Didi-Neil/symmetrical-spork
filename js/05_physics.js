@@ -207,7 +207,7 @@
   /** Crée un corps du bocal. spec: {id,size,color,stone?,x,y,vx?,vy?} */
   Phys.makeBody = function (spec) {
     const r = spec.r || D.SIZES[spec.size].r;
-    const m = r * r * (spec.stone ? PJ.stoneMass : 1);
+    const m = D.massOf(spec.size, r, spec.stone);
     return {
       id: spec.id, size: spec.size, color: spec.color || null, stone: !!spec.stone, grav: spec.grav || null,
       x: spec.x, y: spec.y, vx: spec.vx || 0, vy: spec.vy || 0, r, m, im: 1 / m,

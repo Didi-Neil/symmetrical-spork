@@ -1864,6 +1864,12 @@
       // le verre grossit l'étoile qui entre : rayon de vol → rayon du bocal en 0,16 s
       const gk = b.fromShot ? (t - (b.landT === undefined ? -9 : b.landT)) / 0.16 : 1;
       O.scale = gk >= 0 && gk < 1 ? (D.SIZES[b.size].rf + (D.SIZES[b.size].r - D.SIZES[b.size].rf) * U.easeOutBack(gk)) / D.SIZES[b.size].r : 1;
+      // effondrement du Trou Noir (§5.5) : il naît au diamètre de la Nova (rBorn) et se contracte en 0,3 s
+      const SZ = D.SIZES[b.size];
+      if (SZ.rBorn && b.bornT !== undefined) {
+        const ck = (t - b.bornT) / 0.3;
+        if (ck >= 0 && ck < 1) O.scale = 1 + (SZ.rBorn / SZ.r - 1) * (1 - U.easeOutCubic(ck));
+      }
       R.drawStar(bx, by, b.size, b.color, O);
     }
     O.scale = 1;

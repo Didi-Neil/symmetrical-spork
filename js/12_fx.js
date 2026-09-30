@@ -661,7 +661,10 @@
       FX.stop(0.06); FX.shake(Math.min(6, 1.5 * (e.size - 3)), 0.2); FX.vibrate(15);
       FX.ring(e.x, e.y, r * 0.5, r * 3, col, 0.4, 3, true);
     }
-    if (e.size >= 7) { // Trou Noir : aspiration
+    if (e.size >= 7) { // Trou Noir : effondrement (anneau qui se referme) et aspiration
+      const rb = D.SIZES[e.size].rBorn || r;
+      FX.ring(e.x, e.y, rb * 1.6, r, P.frag, 0.3, 3, true);
+      FX.float(e.x, e.y - r - 22, "EFFONDREMENT", P.frag, 10, { life: 0.9, rise: 8, weight: 900 });
       for (let i = 0; i < 18; i++) {
         const a = rnd() * TAU, d = 50 + rnd() * 40;
         FX.particle(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, { kind: 6, color: P.frag, tx: e.x, ty: e.y, speed: 60, life: 0.6, drag: 0, glow: true, size: 1.6 });
