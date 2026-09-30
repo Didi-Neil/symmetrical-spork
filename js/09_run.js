@@ -68,6 +68,9 @@
     return Math.min(G.horizonMax, Run.horizonBase(run) + Run.passives(run).horizon);
   };
 
+  /** Message court à l'écran (jamais depuis un bac à sable : bots, aperçus, tests). */
+  function toast(msg) { if (!BE.muteEvents && BE.UI && BE.UI.toast) BE.UI.toast(msg); }
+
   // ================================================================ création
   function makeBag(run, list) {
     run.bag = list.map(([color, size]) => ({ id: run.nextBagId++, size, color, grav: null }));
@@ -117,6 +120,12 @@
     Run.ensureDraw(run);
     Firm.setupNight(run);
     Jar.applyRules(run);
+    // une nuit ne commence jamais en Débordement (§2.1 étape 7) : si la ligne est descendue (Verre soufflé acheté à
+    // l'Aube) ou si L'Étau a resserré les murs, ce qui dépasse l'horizon s'évapore avant le premier tir, sans Bougie
+    if (run.jar.bodies.length && Jar.overflowing(run).length) {
+      const n = Jar.trim(run);
+      if (n) toast("Trop-plein évaporé : " + n + (n > 1 ? " étoiles dépassaient" : " étoile dépassait") + " la ligne");
+    }
     run.phase = "AIM";
   };
 
@@ -196,7 +205,9 @@
     const st = BE.state;
     st.run = data; st.play = newPlay(); st.paused = false;
     Run.invalidatePassives();
-    Run.migrate(data);
+    const mig = Run.migrate(data);
+    if (mig) toast(mig.trimmed ? "Partie d'une version précédente : bocal réajusté, " + mig.trimmed + " étoile(s) évaporée(s)"
+      : "Partie d'une version précédente : bocal réajusté au nouveau verre");
     // §12.6 : le bocal n'est sérialisé qu'au repos (gelé par SETTLE / DESCENT / SETTLE_CANDLE avant AIM). Un tir en
     // attente est rejoué depuis cet état EXACT : re-stabiliser ici déplacerait les corps et changerait l'issue du tir
     // rejoué (30 % des reprises divergeaient). On ne stabilise que si un corps n'est pas au repos (sauvegarde ancienne).
@@ -214,6 +225,7 @@
    * Sauvegarde v1 (bocal large de la v1.0 : murs 16/344, rayons 14…62) → v2 (§12.6) : murs du bocal courants, rayon et
    * masse de chaque corps selon DATA.SIZES, tassement silencieux (fusions → réserve), puis le trop-plein s'évapore.
    * Aussi appliqué si un rayon ne correspond plus aux données (sauvegarde d'une version intermédiaire).
+   * Renvoie false si rien n'a changé, sinon { trimmed : corps évaporés } (Run.resume l'annonce par un toast).
    */
   Run.migrate = function (run) {
     const J = run.jar, PJ = D.PHYS.jar;
@@ -231,8 +243,7 @@
     for (const b of J.bodies) b.sleep = false;
     Jar.applyRules(run);
     Jar.settle(run);
-    Jar.trim(run);
-    return true;
+    return { trimmed: Jar.trim(run) };
   };
   Run.toTitle = function () { BE.state.paused = false; Run.go("TITLE"); };
   Run.abandon = function () {
@@ -750,7 +761,7 @@
       let a = 0;
       for (const b of keep) a += Math.PI * b.r * b.r;
       play().vid = { n: Jar.vidangeGold(run), done: false, leave: leave.map((b) => b.id), kept: leave.length < run.jar.bodies.length,
-        fill0: Jar.fill(run), fill1: Math.min(1, a / Jar.capacity(run)) }; // jauge : du remplissage courant vers ce qui reste
+        fill0: Jar.fill(run), fill1: Math.min(0.99, a / Jar.capacity(run)) }; // jauge : du remplissage courant vers ce qui reste
       BE.emit("vidange", { n: play().vid.n });
     },
     update() {

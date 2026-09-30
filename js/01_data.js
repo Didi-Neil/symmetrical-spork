@@ -54,6 +54,7 @@
       g: 980, e: 0.1, eWall: 0.15, eStone: 0.05, mu: 0.25, damp: 0.998, iters: 6,
       beta: 0.6, slop: 0.3, sleepV: 6, sleepT: 0.4, wakeV: 30, restMax: 6, vEnter: 600, maxBodies: 60,
       stoneMass: 1.5, mergeMinAge: 2,
+      carryMargin: 16, // bocal gardé par L'Insomniaque à la Vidange : son haut reste hors de la zone rouge (§6.6)
     },
     speed: { auto2: 2, auto3: 3.5, hold: 3, cap: 4, countHold: 4 },
     previewSteps: 240,

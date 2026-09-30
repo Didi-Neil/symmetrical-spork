@@ -7,8 +7,11 @@
      Constellation, Sac + Épurer, glisser-déposer de reliques) → Vidange → rechargement pendant un tir (PENDING_SHOT
      rejoué) et pendant l'Aube (reprise identique) → Lunes 3 à 5 en accéléré → VICTOIRE → fin de run
      → 2e run à l'Éclipse 1 abandonné depuis la pause → Ciel du Jour perdu par Débordement → titre.
+   Le bot ne touche jamais à la Bougie ni au bocal : s'il perd par Débordement pendant les Lunes 1–2, l'écran de fin est
+   vérifié et un nouveau run est lancé (graine suivante, 3 essais). --reckless : le 1er run remplit le bocal exprès,
+   pour exercer ce chemin.
    Captures dans tools/shots/, code de sortie ≠ 0 à la moindre erreur console / page / script.
-   Usage : NODE_PATH=$(npm root -g) node tools/smoke.js [--quick] */
+   Usage : NODE_PATH=$(npm root -g) node tools/smoke.js [--quick] [--reckless] */
 "use strict";
 process.env.PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
 const path = require("path");
@@ -104,18 +107,19 @@ async function reloadToTitle() {
 /** Meilleur angle (bot greedy, joué sur une copie de l'état : le run réel n'est pas touché). */
 /** Meilleur des 16 angles en Lumière ; un tir qui laisserait le bocal plein à ras (jauge ≥ 97 %) est évité
     si un autre existe — comme un joueur qui regarde la ligne (le test ne touche jamais à la Bougie ni à l'état). */
+let reckless = false; // --reckless : le 1er run vise à remplir le bocal (exerce le chemin « défaite par Débordement »)
 async function greedy() {
-  return page.evaluate(() => {
+  return page.evaluate((reckless) => {
     const run = window.BE.state.run;
     let best = { a: 90, l: -1, s: -Infinity };
     for (let i = 0; i < 16; i++) {
       const a = 14 + i * (152 / 15);
       const r = window.BE.Debug.trial(run, a);
-      const sc = r.lumiere - (r.fill >= 0.97 && r.total < run.quota ? 1e9 : 0);
+      const sc = reckless ? r.fill * 1e6 - r.lumiere : r.lumiere - (r.fill >= 0.97 && r.total < run.quota ? 1e9 : 0);
       if (sc > best.s) best = { a, l: r.lumiere, fill: r.fill, s: sc };
     }
     return best;
-  });
+  }, reckless);
 }
 
 // ---------------------------------------------------------------- Aube
@@ -242,6 +246,14 @@ async function shopVisit(opts) {
 }
 
 // ---------------------------------------------------------------- une nuit jouée par le bot
+/** Défaite réelle du bot (Débordement) : un chemin de jeu valide, pas une erreur du jeu (voir la boucle des Lunes 1–2). */
+class RunLost extends Error {
+  constructor(s) { super("run perdu (" + (s.result && s.result.cause) + ") en L" + s.lune + " N" + (s.nuit + 1)); this.state = s; }
+}
+async function checkLost(s) {
+  if (s.result && !s.result.won) throw new RunLost(s);
+  return s;
+}
 async function playNight(opts) {
   opts = opts || {};
   let s = await state();
@@ -264,12 +276,12 @@ async function playNight(opts) {
     log("  reprise :", s.scene, "tir", s.shotIndex, "(avant :", before.shotIndex + ")");
     if (s.shotIndex !== before.shotIndex + 1) throw new Error("le tir en attente n'a pas été rejoué");
     await page.evaluate(() => window.BE.Test.setTurbo(4));
-    s = await waitShotResolved();
+    s = await checkLost(await waitShotResolved());
   }
   let guard = 0;
   while (s.scene === "AIM" && guard++ < 12) {
     const b = await greedy();
-    if (s.shotsLeft <= 1 && s.total + b.l < s.quota) {
+    if (!reckless && s.shotsLeft <= 1 && s.total + b.l < s.quota) {
       // le bot ne peut plus gagner : on force la nuit (le test vise le parcours, pas l'équilibrage)
       log("  nuit forcée (L" + s.lune + " N" + s.nuit + " : " + s.total + " + " + b.l + " < " + s.quota + ")");
       await page.evaluate(() => window.BE.Test.winNight());
@@ -279,10 +291,11 @@ async function playNight(opts) {
     s = await waitShotResolved();
     log("  tir " + b.a.toFixed(1) + "° :", s.scene, s.total + "/" + s.quota, "bocal", s.jar, "or", s.gold);
   }
-  s = await state();
+  s = await checkLost(await state());
   if (opts.wonShots) {
     await page.evaluate(() => window.BE.Test.setTurbo(1));
     s = await waitFor((x) => x.scene === "NIGHT_WON" || x.scene === "SHOP" || x.scene === "RUN_END", "NIGHT_WON", 20000);
+    await checkLost(s);
     if (s.scene === "NIGHT_WON") { await sleep(1300); await shot(opts.wonShots); see("nightWon"); }
     if (opts.vidange) {
       s = await waitFor((x) => x.scene === "VIDANGE" || x.scene === "SHOP", "VIDANGE", 20000);
@@ -290,12 +303,13 @@ async function playNight(opts) {
     }
     await page.evaluate(() => window.BE.Test.setTurbo(4));
   }
-  return waitFor((x) => x.scene === "SHOP" || x.scene === "RUN_END" || x.scene === "RUN_WON", "fin de nuit", 30000);
+  return checkLost(await waitFor((x) => x.scene === "SHOP" || x.scene === "RUN_END" || x.scene === "RUN_WON", "fin de nuit", 30000));
 }
 
 // ================================================================================================
 (async () => {
   const quick = process.argv.includes("--quick");
+  reckless = process.argv.includes("--reckless");
   fs.mkdirSync(SHOTS, { recursive: true });
   for (const f of fs.readdirSync(SHOTS)) if (f.endsWith(".png")) fs.unlinkSync(path.join(SHOTS, f));
   const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
@@ -417,40 +431,72 @@ async function playNight(opts) {
     }
 
     // ------------------------------------------------------------ Lunes 1 et 2 jouées par le bot, Aube à chaque nuit
-    await page.evaluate(() => window.BE.Test.setTurbo(4));
-    // L1 N1
-    s = await playNight({ wonShots: "nuit_gagnee" });
-    await shopVisit({ capture: "shop_L1N1", gold: 20, reroll: true, expectBuy: true });
-    // L1 N2 (avec rechargement pendant un tir)
-    s = await playNight({ pending: true });
-    await shopVisit({ gold: 20, pack: true });
-    // L1 Boss → Vidange
-    s = await playNight({ introShot: "intro_boss_L1", wonShots: "nuit_gagnee_boss", vidange: true });
-    await shopVisit({ capture: "shop_apres_vidange", gold: 25, bag: true, drag: true });
-    if ((await state()).lune !== 2) throw new Error("pas de Lune 2 après la Vidange");
-    // L2 N1 (intro avec « Nouvelle Ombre »)
-    s = await playNight({ introShot: "intro_L2" });
-    // reprise pendant l'Aube : l'état de l'Aube doit être identique
-    await waitFor((x) => x.scene === "SHOP", "Aube L2");
-    await sleep(600);
-    const shopBefore = await page.evaluate(() => JSON.stringify(window.BE.state.run.shop.offers) + "|" + window.BE.state.run.gold);
-    await reloadToTitle();
-    await tapRegion("continue");
-    await waitFor((x) => x.scene === "SHOP", "reprise dans l'Aube");
-    const shopAfter = await page.evaluate(() => JSON.stringify(window.BE.state.run.shop.offers) + "|" + window.BE.state.run.gold);
-    if (shopAfter !== shopBefore) throw new Error("l'Aube reprise diffère de l'Aube sauvegardée");
-    log("reprise dans l'Aube : identique");
-    await page.evaluate(() => window.BE.Test.setTurbo(4));
-    await shopVisit({ gold: 15, lock: true, capture: "shop_L2N1" });
-    // L2 N2
-    s = await playNight();
-    await shopVisit({ gold: 15 });
-    // L2 Boss
-    s = await playNight({ introShot: "intro_boss_L2" });
-    await shopVisit({ gold: 10, capture: quick ? null : "shop_L3" });
-    s = await state();
-    if (s.lune !== 3) throw new Error("Lune 3 non atteinte (L" + s.lune + ")");
-    log("Lunes 1 et 2 terminées — " + ((Date.now() - t0) / 1000).toFixed(0) + " s");
+    // Le bot joue pour de vrai, sans jamais toucher à la Bougie ni au bocal : un Débordement est une issue normale du
+    // jeu. Il est alors vérifié (écran de fin, cause « Débordement »), puis un nouveau run est lancé avec une autre graine.
+    let lostOverflow = 0;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await page.evaluate(() => window.BE.Test.setTurbo(4));
+        // L1 N1
+        s = await playNight({ wonShots: "nuit_gagnee" });
+        await shopVisit({ capture: "shop_L1N1", gold: 20, reroll: true, expectBuy: true });
+        // L1 N2 (avec rechargement pendant un tir)
+        s = await playNight({ pending: true });
+        await shopVisit({ gold: 20, pack: true });
+        // L1 Boss → Vidange
+        s = await playNight({ introShot: "intro_boss_L1", wonShots: "nuit_gagnee_boss", vidange: true });
+        await shopVisit({ capture: "shop_apres_vidange", gold: 25, bag: true, drag: true });
+        if ((await state()).lune !== 2) throw new Error("pas de Lune 2 après la Vidange");
+        // L2 N1 (intro avec « Nouvelle Ombre »)
+        s = await playNight({ introShot: "intro_L2" });
+        // reprise pendant l'Aube : l'état de l'Aube doit être identique
+        await waitFor((x) => x.scene === "SHOP", "Aube L2");
+        await sleep(600);
+        const shopBefore = await page.evaluate(() => JSON.stringify(window.BE.state.run.shop.offers) + "|" + window.BE.state.run.gold);
+        await reloadToTitle();
+        await tapRegion("continue");
+        await waitFor((x) => x.scene === "SHOP", "reprise dans l'Aube");
+        const shopAfter = await page.evaluate(() => JSON.stringify(window.BE.state.run.shop.offers) + "|" + window.BE.state.run.gold);
+        if (shopAfter !== shopBefore) throw new Error("l'Aube reprise diffère de l'Aube sauvegardée");
+        log("reprise dans l'Aube : identique");
+        await page.evaluate(() => window.BE.Test.setTurbo(4));
+        await shopVisit({ gold: 15, lock: true, capture: "shop_L2N1" });
+        // L2 N2
+        s = await playNight();
+        await shopVisit({ gold: 15 });
+        // L2 Boss
+        s = await playNight({ introShot: "intro_boss_L2" });
+        await shopVisit({ gold: 10, capture: quick ? null : "shop_L3" });
+        s = await state();
+        if (s.lune !== 3) throw new Error("Lune 3 non atteinte (L" + s.lune + ")");
+        log("Lunes 1 et 2 terminées — " + ((Date.now() - t0) / 1000).toFixed(0) + " s");
+        break;
+      } catch (e) {
+        if (!(e instanceof RunLost) || attempt >= 3) throw e;
+        const ls = e.state, wasReckless = reckless;
+        reckless = false;
+        // le bot normal force la nuit plutôt que de manquer le quota ; le bot --reckless peut perdre des deux façons
+        if (ls.result.cause !== "overflow" && !wasReckless) throw new Error("défaite inattendue du bot : " + e.message);
+        lostOverflow++;
+        log("  " + e.message + " — chemin de défaite valide, nouveau run");
+        s = await waitFor((x) => x.scene === "RUN_END", "écran de fin après Débordement", 20000);
+        await sleep(2200);
+        await shot("fin_de_run_defaite_bot"); see("runLost_" + ls.result.cause);
+        await tapRegion("menu");
+        await waitFor((x) => x.scene === "TITLE", "TITLE");
+        if (await page.evaluate(() => window.BE.Save.hasRun())) throw new Error("run perdu encore reprenable");
+        await tapRegion("new");
+        await waitFor((x) => x.scene === "SELECT", "SELECT");
+        await sleep(400);
+        const seed = SMOKE_SEED + "-R" + (attempt + 1);
+        await page.evaluate((seed) => { const U = window.BE.util; U._newSeed = U.newSeed; U.newSeed = () => { U.newSeed = U._newSeed; return seed; }; }, seed);
+        await tapRegion("launch");
+        await waitFor((x) => x.scene === "NIGHT_INTRO", "NIGHT_INTRO");
+        await ensureAim();
+        s = await state();
+      }
+    }
+    if (lostOverflow) log("Débordements du bot pendant les Lunes 1–2 : " + lostOverflow);
 
     // ------------------------------------------------------------ Lunes 3 à 5 en accéléré → victoire
     for (let k = 0; k < 12; k++) {

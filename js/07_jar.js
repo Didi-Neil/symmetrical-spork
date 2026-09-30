@@ -274,14 +274,16 @@
   // ---------------------------------------------------------------- requêtes
   Jar.isRest = (run) => Phys.allAsleep(run.jar);
   /**
-   * Remplissage (§4) — fonction pure : max(Σ aires / capacité, hauteur du tas / hauteur utile), borné à 1.
+   * Remplissage (§4) — fonction pure : max(Σ aires / capacité (≤ 99 %), hauteur du tas / hauteur utile), borné à 1.
    *  - capacité = largeur × (fond − horizon) × compacité 0,6 d'un tas d'étoiles au repos ;
    *  - hauteur = (fond − haut du tas) / (fond − horizon) : 100 % quand le tas touche la ligne (Débordement).
    * Le terme « hauteur » rend la jauge honnête quand quelques grosses étoiles s'empilent sans remplir la surface.
    */
   Jar.fillOf = function (area, top, w, floor, h) {
     const hh = Math.max(1, floor - h);
-    const fa = area / (Math.max(1, w) * hh * G.packing);
+    // le terme surface plafonne à 99 % : seul le terme hauteur (tas qui touche la ligne) affiche 100 %, qui reste
+    // ainsi exactement le point de Débordement (un tas très compact peut dépasser la compacité 0,6 sans toucher la ligne)
+    const fa = Math.min(0.99, area / (Math.max(1, w) * hh * G.packing));
     const fh = top === null || top === undefined ? 0 : (floor - top) / hh;
     return Math.max(0, Math.min(1, Math.max(fa, fh)));
   };
@@ -378,19 +380,27 @@
     return R.keepJarMin ? run.jar.bodies.filter((b) => !b.stone && b.size < R.keepJarMin) : [];
   };
   /**
-   * Trop-plein (§2.1 étape 7, §6.6) : les corps qui dépassent encore l'horizon s'évaporent, sans Bougie ni or, puis
-   * le bocal se tasse (fusions → réserve). Utilisé quand une nuit est gagnée bocal débordant, après la Vidange partielle
-   * de L'Insomniaque et à la reprise d'une ancienne sauvegarde. Renvoie le nombre de corps évaporés.
+   * Trop-plein (§2.1 étape 7, §6.6) : les corps dont le haut dépasse l'horizon (ou s'en approche à moins de `margin` px)
+   * s'évaporent, sans Bougie ni or, puis le bocal se tasse (fusions → réserve). Utilisé quand une nuit est gagnée bocal
+   * débordant, au début de chaque nuit (Verre soufflé acheté à l'Aube, L'Étau qui resserre les murs), après la Vidange
+   * partielle de L'Insomniaque (marge = zone rouge, §6.6) et à la reprise d'une ancienne sauvegarde.
+   * Garanti : au retour, aucun corps n'a son haut au-dessus de horizon + margin. Renvoie le nombre de corps évaporés.
    */
-  Jar.trim = function (run) {
+  Jar.trim = function (run, margin) {
+    const lim = () => BE.Run.horizon(run) + (margin || 0);
+    const above = () => { const h = lim(); return run.jar.bodies.filter((b) => b.y - b.r < h); };
     let n = 0;
-    for (let pass = 0; pass < 4; pass++) {
-      const over = Jar.overflowing(run);
-      if (!over.length) break;
+    for (let pass = 0; pass < 12; pass++) {
+      const over = above();
+      if (!over.length) return n;
       n += over.length;
       Jar.evaporate(run, over);
       Jar.settle(run);
     }
+    // filet de sécurité : le tassement a encore fait remonter un corps (fusion en cascade) → évaporation sans tassement
+    // (retirer un corps ne fait jamais monter les autres : le bocal ne peut que retomber)
+    const over = above();
+    if (over.length) { n += over.length; Jar.evaporate(run, over); Phys.freeze(run.jar); }
     return n;
   };
   /** Or de la Vidange : +1 par étoile de taille ≥ 4 QUI QUITTE le bocal (max 5). */
@@ -401,7 +411,8 @@
   };
   /**
    * Vidange de fin de Lune : or (Jar.vidangeGold), puis le bocal est vidé ; keepJar : seules les petites étoiles
-   * partent, le reste se tasse en silence (fusions → réserve) et ce qui dépasse encore l'horizon s'évapore (Jar.trim).
+   * partent, le reste se tasse en silence (fusions → réserve) et ce qui dépasse encore l'horizon ou entre dans la zone
+   * rouge (16 px) s'évapore (Jar.trim).
    * candleRelit : la Bougie se rallume.
    */
   Jar.vidange = function (run) {
@@ -410,7 +421,9 @@
     if (gone.length === run.jar.bodies.length) run.jar.bodies.length = 0;
     else {
       if (gone.length) { run.jar.bodies = run.jar.bodies.filter((b) => gone.indexOf(b) < 0); Jar.settle(run); }
-      Jar.trim(run);
+      // la Lune suivante ne commence ni en Débordement ni en zone rouge (§6.6) : sinon, sans Bougie (Éclipse 6),
+      // le premier tir perdrait le run sans que le joueur y puisse rien
+      Jar.trim(run, D.PHYS.jar.carryMargin);
     }
     if (run.rules.candleRelit && run.eclipse < 6) run.candle = Math.max(run.candle, run.rules.candle);
     return n;

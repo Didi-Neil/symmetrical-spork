@@ -140,7 +140,9 @@
   /** Validation structurelle d'un run sérialisé (§3.2 d'ARCHITECTURE). Renvoie null si valide, sinon la raison. */
   Save.checkRun = function (r) {
     const D = BE.DATA;
-    if (!isObj(r) || (r.v !== 1 && r.v !== 2)) return "version"; // v1 (bocal large) : migrée par Run.migrate à la reprise
+    // v:2 depuis le bocal étroit (v1.1) ; v:1 (bocal large de la v1.0) : accepté puis migré par Run.migrate à la reprise
+    if (!isObj(r)) return "format";
+    if (r.v !== 1 && r.v !== 2) return "version";
     if (typeof r.seed !== "string" || !r.seed) return "seed";
     if (!isObj(r.streams)) return "streams";
     for (const k of (BE.util && BE.util.STREAMS) || ["bag", "shop", "waves", "pegs", "misc"]) if (typeof r.streams[k] !== "number") return "stream " + k;
@@ -171,6 +173,9 @@
       Save.stats.rejected++;
       try { console.warn("[Save] run sauvegardé écarté :", why); } catch (e) { /* */ }
       write(KEY_RUN, null);
+      // prévenir le joueur (une seule fois : le run est effacé), sauf pour un run déjà terminé
+      if (why !== "terminé" && !BE.muteEvents && BE.UI && BE.UI.toast)
+        BE.UI.toast(why === "version" ? "Partie d'une version incompatible : elle a été écartée" : "Partie sauvegardée illisible : elle a été écartée");
       return null;
     }
     return r;
