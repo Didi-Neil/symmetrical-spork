@@ -814,7 +814,12 @@
   BE.on("devour", (e) => { FX.banner("DÉVORÉE", e.x, e.y - 20, "#ff7a9a", 16, 1); FX.ring(e.x, e.y, 44, 2, "#ff7a9a", 0.4, 3, true); FX.shake(2, 0.2); });
   // dans le ciel (comme « BOSS VAINCU ») : ni la pastille ×3 ni l'indice « Maintiens » ne la recouvrent
   BE.on("candle", () => { FX.banner("LA BOUGIE S'ÉTEINT", 180, 300, P.or, 18, 1.8, "Les étoiles au-dessus de l'horizon s'évaporent"); FX.flash(0.3, P.or); });
-  BE.on("trim", (e) => { FX.banner("TROP-PLEIN ÉVAPORÉ", 180, 300, "#dfe6ff", 16, 1.6, "Le quota éteint ce qui dépasse l'horizon"); });
+  // trop-plein évaporé (§2.1 étape 7) : bannière pour la nuit gagnée (reason "quota") ; au début d'une nuit ("night")
+  // et à la Vidange de L'Insomniaque ("vidange"), l'écran suivant (intro, Aube) efface le ciel : 09_run affiche un toast
+  BE.on("trim", (e) => {
+    if (e.reason && e.reason !== "quota") return;
+    FX.banner("TROP-PLEIN ÉVAPORÉ", 180, 300, "#dfe6ff", 16, 1.6, "Le quota éteint ce qui dépasse l'horizon");
+  });
   BE.on("squeeze", () => { FX.shake(2, 0.3); });
   BE.on("horloge", () => { FX.banner("L'HORLOGE RETIENT LES OMBRES", 180, 150, P.frag, 13, 1.3); });
   BE.on("lay", (e) => { if (e.from && e.to) FX.beam(e.from.x, e.from.y, e.to.x, e.to.y, P.ombreLine, 3, 0.3); });

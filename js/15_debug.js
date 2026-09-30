@@ -1178,9 +1178,53 @@
       BE.Jar.add(run, { size: 4, color: "seve", x: cx - 4, y: D.GEOM.floor - 2 * D.SIZES[6].r - 2 * D.SIZES[5].r - D.SIZES[4].r });
       BE.Jar.add(run, { size: 2, color: "braise", x: run.jar.wallL + 30, y: D.GEOM.floor - 30 });
       BE.Jar.stabilize(run, 720);
-      BE.Jar.vidange(run);
+      const out = {};
+      BE.Jar.vidange(run, out);
       eq(BE.Jar.overflowing(run).length, 0, "aucun corps au-dessus de l'horizon après la Vidange");
       assert(BE.Jar.isRest(run), "bocal au repos");
+      // §6.6 : le bocal gardé sort aussi de la zone rouge (marge 16 px), même sans Bougie
+      assert(!BE.Jar.danger(run), "pas d'alerte rouge au premier tir de la Lune suivante");
+      assert(!BE.Jar.near(run, D.PHYS.jar.carryMargin - 0.01), "haut du tas à ≥ 16 px de la ligne");
+      assert(typeof out.trimmed === "number", "Jar.vidange rend le nombre de corps évaporés");
+    });
+  });
+  // deux Pierres « Nova » posées d'un mur à l'autre (200 px) : une Pierre de taille 3 dans le creux a son haut à y ≈ 471
+  // (sous la ligne 452, au-dessus de la ligne 476 du Verre soufflé) ; sous L'Étau (168 px), les deux Novas s'empilent
+  function wallToWall(run, top) {
+    run.jar.bodies = [];
+    const r6 = D.SIZES[6].r;
+    BE.Jar.add(run, { size: 6, stone: true, x: D.GEOM.jarL + r6, y: D.GEOM.floor - r6 });
+    BE.Jar.add(run, { size: 6, stone: true, x: D.GEOM.jarR - r6, y: D.GEOM.floor - r6 });
+    if (top) BE.Jar.add(run, { size: 3, stone: true, x: 180, y: D.GEOM.floor - r6 - 64 });
+    BE.Jar.stabilize(run, 480);
+  }
+  test("Débordement", "début de nuit : Verre soufflé acheté à l'Aube → ce qui dépasse la nouvelle ligne s'évapore, sans Bougie", () => {
+    withRun({ seed: "TRIM-2" }, (run) => {
+      wallToWall(run, true);
+      eq(BE.Jar.overflowing(run).length, 0, "sous la ligne 452");
+      const n0 = run.jar.bodies.length;
+      run.relics.push({ id: "R27", evolved: false }); BE.Run.invalidatePassives();
+      eq(BE.Run.horizon(run), D.GEOM.horizon + 24, "ligne descendue");
+      assert(BE.Jar.overflowing(run).length > 0, "la Pierre du creux dépasse la nouvelle ligne");
+      run.candle = 1;
+      BE.Run.startNight(run);
+      eq(BE.Jar.overflowing(run).length, 0, "aucun Débordement au premier tir");
+      assert(run.jar.bodies.length < n0, "trop-plein évaporé");
+      eq(run.candle, 1, "Bougie intacte");
+    });
+  });
+  test("Débordement", "début de nuit : L'Étau resserre les murs → le bocal se tasse et ce qui dépasse s'évapore", () => {
+    withRun({ seed: "TRIM-3" }, (run) => {
+      wallToWall(run, false);
+      eq(BE.Jar.overflowing(run).length, 0, "deux Novas côte à côte sous la ligne");
+      run.nuit = 2; run.firm.bossId = "etau"; run.candle = 1;
+      BE.Run.startNight(run);
+      assert(BE.Firm.ruleActive(run, "etau"), "L'Étau est actif");
+      eq(run.jar.wallL, D.GEOM.etauL); eq(run.jar.wallR, D.GEOM.etauR);
+      eq(BE.Jar.overflowing(run).length, 0, "aucun Débordement au premier tir");
+      eq(run.jar.bodies.length, 1, "une Nova évaporée (deux ne tiennent pas côte à côte dans 168 px)");
+      for (const b of run.jar.bodies) assert(b.x - b.r >= D.GEOM.etauL - 1 && b.x + b.r <= D.GEOM.etauR + 1, "corps entre les murs de L'Étau");
+      eq(run.candle, 1, "Bougie intacte");
     });
   });
   test("Débordement", "nuit gagnée bocal débordant : le trop-plein s'évapore sans Bougie ; la nuit suivante ne commence pas en Débordement", () => {
@@ -1215,6 +1259,47 @@
       }
     });
   });
+  /** Fait tourner le bocal (fusions comprises) jusqu'au repos ; renvoie le journal. */
+  function jarRun(run, steps) {
+    const S = { log: [] };
+    BE.Phys.wakeAll(run.jar);
+    for (let i = 0; i < (steps || 720); i++) { BE.Jar.step(run, DT, S); if (i > 12 && BE.Phys.allAsleep(run.jar)) break; }
+    return S.log;
+  }
+  test("Fusion", "Trou Noir effondré : Nova + Nova → Trou Noir compact et dense, sans Big Bang", () => {
+    const TN = D.SIZES[7], NO = D.SIZES[6];
+    assert(TN.r < NO.r, "le Trou Noir est plus petit qu'une Nova");
+    assert(TN.rBorn >= NO.r, "il naît au moins au diamètre d'une Nova");
+    near(D.massOf(7, TN.r, false), TN.rBorn * TN.rBorn, 0.01 * TN.rBorn * TN.rBorn, "masse ≈ disque de rBorn");
+    withRun({ seed: "TN-2" }, (run) => {
+      run.jar.bodies = [];
+      BE.Jar.add(run, { size: 6, color: "braise", x: 130, y: D.GEOM.floor - 50 });
+      BE.Jar.add(run, { size: 6, color: "braise", x: 230, y: D.GEOM.floor - 50 });
+      const log = jarRun(run);
+      eq(run.jar.bodies.length, 1, "une seule étoile"); eq(run.jar.bodies[0].size, 7, "Trou Noir");
+      eq(run.jar.bodies[0].r, TN.r, "rayon effondré");
+      assert(!log.some((e) => e.t === "bigbang"), "pas de Big Bang");
+    });
+  });
+  test("Fusion", "Big Bang : Trou Noir + Nova (ou Trou Noir) ; jamais avec une Géante ni une Pierre ; permis à la Forgeronne", () => {
+    const bang = (opts, other) => withRun(opts, (run) => {
+      run.jar.bodies = [];
+      BE.Jar.add(run, { size: 7, color: "braise", x: D.GEOM.jarL + D.SIZES[7].r, y: D.GEOM.floor - D.SIZES[7].r });
+      // l'autre corps tombe sur le Trou Noir (décalé de 60 px : il le touche forcément)
+      BE.Jar.add(run, Object.assign({ x: D.GEOM.jarL + D.SIZES[7].r + 60, y: D.GEOM.floor - 2 * D.SIZES[7].r - D.SIZES[other.size].r - 10 }, other));
+      const log = jarRun(run);
+      return { log, run, bb: log.some((e) => e.t === "bigbang") };
+    });
+    let r = bang({ seed: "BB-1" }, { size: 6, color: "givre" });
+    assert(r.bb, "Trou Noir + Nova");
+    eq(r.run.jar.bodies.length, 0, "bocal vidé"); eq(r.run.runStats.bigBangs, 1);
+    const ec = r.log.find((e) => e.t === "eclat" && e.src === "bigbang");
+    eq(ec && ec.n, 7 + 6, "+Éclat = Σ tailles");
+    assert(bang({ seed: "BB-2" }, { size: 7, color: "givre" }).bb, "Trou Noir + Trou Noir");
+    assert(!bang({ seed: "BB-3" }, { size: 5, color: "givre" }).bb, "pas avec une Géante");
+    assert(!bang({ seed: "BB-4" }, { size: 5, stone: true }).bb, "pas avec une Pierre");
+    assert(bang({ seed: "BB-5", gardien: "forgeronne" }, { size: 6, color: "givre" }).bb, "Forgeronne : le Big Bang n'est pas une fusion mixte");
+  });
   test("Débordement", "jauge = max(surface / capacité, hauteur du tas) ; 100 % quand le tas touche l'horizon", () => {
     withRun({ seed: "GAU-1" }, (run) => {
       run.jar.bodies = [];
@@ -1247,6 +1332,13 @@
         old.jar.bodies.push(Object.assign(BE.Phys.makeBody({ id: 500 + i, size, color: "braise", x: 30 + i * 36, y: D.GEOM.floor - r }), { r, m, im: 1 / m, sleep: true }));
       }
       eq(BE.Save.checkRun(old), null, "une sauvegarde v1 reste acceptée");
+      // Run.migrate : { trimmed } la première fois (annoncé par un toast), false une fois à jour
+      const probe = JSON.parse(JSON.stringify(old));
+      const mig = BE.Run.migrate(probe);
+      assert(mig && typeof mig.trimmed === "number", "migration signalée");
+      assert(/version précédente/.test(BE.Run.migrateMessage(mig)), "message du toast");
+      assert(/2 étoiles évaporées/.test(BE.Run.migrateMessage({ trimmed: 2 })) && /1 étoile évaporée/.test(BE.Run.migrateMessage({ trimmed: 1 })), "accord");
+      eq(BE.Run.migrate(probe), false, "déjà migré : rien à annoncer");
       BE.Run.resume(old);
       const run = st.run;
       eq(run.v, 2, "version");

@@ -78,7 +78,13 @@
     J.wallL = L; J.wallR = R;
     if (narrowed) {
       Phys.wakeAll(J);
-      if (J.bodies.some((b) => b.x - b.r < L - 0.5 || b.x + b.r > R + 0.5)) Jar.squeeze(run);
+      if (J.bodies.some((b) => b.x - b.r < L - 0.5 || b.x + b.r > R + 0.5)) {
+        // deux corps de même rayon posés au fond ont exactement le même y : poussés par les murs, leur contact est
+        // purement horizontal et le solveur les laisse s'interpénétrer. 1 px de décalage (ids impairs, déterministe)
+        // suffit pour que l'un monte sur l'autre
+        for (const b of J.bodies) if (b.id & 1) b.y -= 1;
+        Jar.squeeze(run);
+      }
     }
   };
 
@@ -426,9 +432,10 @@
    * Vidange de fin de Lune : or (Jar.vidangeGold), puis le bocal est vidé ; keepJar : seules les petites étoiles
    * partent, le reste se tasse en silence (fusions → réserve) et ce qui dépasse encore l'horizon ou entre dans la zone
    * rouge (16 px) s'évapore (Jar.trim).
-   * candleRelit : la Bougie se rallume.
+   * candleRelit : la Bougie se rallume. out (facultatif) reçoit { trimmed : corps évaporés par Jar.trim } ; l'événement
+   * « trim » (reason "vidange") est émis s'il y en a.
    */
-  Jar.vidange = function (run) {
+  Jar.vidange = function (run, out) {
     const n = Jar.vidangeGold(run);
     const gone = Jar.vidangeLeaving(run);
     if (gone.length === run.jar.bodies.length) run.jar.bodies.length = 0;
@@ -436,7 +443,9 @@
       if (gone.length) { run.jar.bodies = run.jar.bodies.filter((b) => gone.indexOf(b) < 0); Jar.settle(run); }
       // la Lune suivante ne commence ni en Débordement ni en zone rouge (§6.6) : sinon, sans Bougie (Éclipse 6),
       // le premier tir perdrait le run sans que le joueur y puisse rien
-      Jar.trim(run, D.PHYS.jar.carryMargin);
+      const t = Jar.trim(run, D.PHYS.jar.carryMargin);
+      if (out) out.trimmed = t;
+      if (t) BE.emit("trim", { n: t, y: BE.Run.horizon(run), reason: "vidange" });
     }
     if (run.rules.candleRelit && run.eclipse < 6) run.candle = Math.max(run.candle, run.rules.candle);
     return n;

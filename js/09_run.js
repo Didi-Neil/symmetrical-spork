@@ -124,7 +124,12 @@
     // l'Aube) ou si L'Étau a resserré les murs, ce qui dépasse l'horizon s'évapore avant le premier tir, sans Bougie
     if (run.jar.bodies.length && Jar.overflowing(run).length) {
       const n = Jar.trim(run);
-      if (n) toast("Trop-plein évaporé : " + n + (n > 1 ? " étoiles dépassaient" : " étoile dépassait") + " la ligne");
+      // événement « trim » (reason "night") pour qui veut l'écouter ; l'annonce reste un toast : la scène suivante
+      // (NIGHT_INTRO) efface les bannières du ciel (FX.clear)
+      if (n) {
+        BE.emit("trim", { n, y: Run.horizon(run), reason: "night" });
+        toast("Trop-plein évaporé : " + n + (n > 1 ? " étoiles dépassaient" : " étoile dépassait") + " la ligne");
+      }
     }
     run.phase = "AIM";
   };
@@ -206,8 +211,7 @@
     st.run = data; st.play = newPlay(); st.paused = false;
     Run.invalidatePassives();
     const mig = Run.migrate(data);
-    if (mig) toast(mig.trimmed ? "Partie d'une version précédente : bocal réajusté, " + mig.trimmed + " étoile(s) évaporée(s)"
-      : "Partie d'une version précédente : bocal réajusté au nouveau verre");
+    if (mig) toast(Run.migrateMessage(mig));
     // §12.6 : le bocal n'est sérialisé qu'au repos (gelé par SETTLE / DESCENT / SETTLE_CANDLE avant AIM). Un tir en
     // attente est rejoué depuis cet état EXACT : re-stabiliser ici déplacerait les corps et changerait l'issue du tir
     // rejoué (30 % des reprises divergeaient). On ne stabilise que si un corps n'est pas au repos (sauvegarde ancienne).
@@ -245,6 +249,11 @@
     Jar.applyRules(run);
     Jar.settle(run);
     return { trimmed: Jar.trim(run) };
+  };
+  /** Message (toast) d'un run migré : résultat non nul de Run.migrate. */
+  Run.migrateMessage = function (mig) {
+    return mig.trimmed ? "Partie d'une version précédente : bocal réajusté, " + mig.trimmed + (mig.trimmed > 1 ? " étoiles évaporées" : " étoile évaporée")
+      : "Partie d'une version précédente : bocal réajusté au nouveau verre";
   };
   Run.toTitle = function () { BE.state.paused = false; Run.go("TITLE"); };
   Run.abandon = function () {
@@ -725,7 +734,7 @@
       // §2.1 étape 7 : le quota passe avant le Débordement ; « le quota éteint le trop-plein » — ce qui dépasse
       // l'horizon s'évapore (sans Bougie) pour que la nuit suivante ne commence jamais en Débordement
       const over = Jar.overflowing(run);
-      if (over.length) { BE.emit("trim", { n: over.length, y: Run.horizon(run) }); S.won.trimmed = Jar.trim(run); }
+      if (over.length) { BE.emit("trim", { n: over.length, y: Run.horizon(run), reason: "quota" }); S.won.trimmed = Jar.trim(run); }
     },
     update(dt) {
       const run = BE.state.run, S = play(), W = S.won;
@@ -769,7 +778,8 @@
       const run = BE.state.run, V = play().vid;
       if (!V.done && BE.state.sceneT >= D.FX.vidange) {
         V.done = true;
-        const n = Jar.vidange(run);
+        const out = {}, n = Jar.vidange(run, out);
+        if (out.trimmed) toast("Bocal gardé : " + out.trimmed + (out.trimmed > 1 ? " étoiles trop hautes évaporées" : " étoile trop haute évaporée"));
         run.gold += n; run.runStats.gold += n;
         if (run.lastReward) run.lastReward.vidange = n;
         Run.go("SHOP");
