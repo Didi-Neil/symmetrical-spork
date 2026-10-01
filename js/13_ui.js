@@ -514,7 +514,7 @@
     const bossLines = isBoss ? lineCount(D.BOSSES[run.firm.boss.bossId].rule, 270, 12 * ts()) : 0;
     // §2.2 : la règle du boss de la Lune est annoncée dès la carte de la Nuit Mince
     const lb = run.nuit === 0 && run.firm.bossId ? D.BOSSES[run.firm.bossId] : null;
-    const lbLines = lb ? lineCount(lb.rule, 230, 10.5 * ts()) : 0;
+    const lbLines = lb ? lineCount(lb.rule, 216, 10.5 * ts()) : 0; // colonne de texte à droite du portrait du Boss
     const hold = UI.introHold();
     let h = 170 + (isBoss ? 104 + bossLines * 15 * ts() : 26 + (introGraceEnd(run) ? 16 : 0)) + (lb ? 30 + lbLines * 13 * ts() : 0) + (cards.length ? 18 + cards.length * 50 : 0) + 50;
     h = Math.min(h, 600);
@@ -553,8 +553,9 @@
       g.fillStyle = U.rgba(lb.color, 0.1); rr(40, y - 10, 280, 22 + lbLines * 13 * ts(), 10); g.fill();
       g.strokeStyle = U.rgba(lb.color, 0.35); g.lineWidth = 1; rr(40, y - 10, 280, 22 + lbLines * 13 * ts(), 10); g.stroke();
       BE.Render.drawShadow(fakeShadow("boss", 62, y + 1 + lbLines * 6.5 * ts(), 9, lb.id), { x: 62, y: y + 30 });
-      fitText("Boss de la Lune : " + lb.nom, 190, y + 1, 240, 11, lb.color, "center", 900);
-      wrap(lb.rule, 190, y + 15, 230, 10.5 * ts(), U.rgba(P.text, 0.85), 13 * ts());
+      // le portrait du Boss (yeux, monocle…) déborde de son rayon : le texte commence après lui (x ≥ 96)
+      fitText("Boss de la Lune : " + lb.nom, 206, y + 1, 216, 11, lb.color, "center", 900);
+      wrap(lb.rule, 206, y + 15, 216, 10.5 * ts(), U.rgba(P.text, 0.85), 13 * ts());
       y += 30 + lbLines * 13 * ts();
     }
     if (cards.length) {
