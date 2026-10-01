@@ -294,13 +294,14 @@
   };
 
   /**
-   * Effondrement (§5.5, v1.1c) : bocal au repos en zone rouge (Jar.danger) ou débordant, avec une Nova → la Nova la plus
-   * basse (y max, puis id min) s'effondre en Trou Noir (rayon 40 : le tas retombe). Pas de Mult (rien n'a fusionné).
-   * Renvoie le Trou Noir créé, ou null. L'appelant laisse ensuite le bocal se tasser (SETTLE_CANDLE, fusions → réserve).
+   * Effondrement (§5.5, v1.1c) : bocal au repos en Débordement avec une Nova → avant la Bougie, la Nova la plus basse
+   * (y max, puis id min : celle qui porte le tas) s'effondre en Trou Noir (rayon 50 → 40 : le tas retombe). Pas de Mult
+   * (rien n'a fusionné). Renvoie le Trou Noir créé, ou null. L'appelant laisse ensuite le bocal se tasser
+   * (SETTLE_CANDLE, fusions → réserve) puis revérifie le Débordement.
    */
   Jar.collapseCandidate = function (run) {
     if (!(D.COLLAPSE && D.COLLAPSE.on)) return null;
-    if (!Jar.danger(run) && !Jar.overflowing(run).length) return null;
+    if (!Jar.overflowing(run).length) return null;
     let best = null;
     for (const b of run.jar.bodies) {
       if (b.stone || b.size !== D.MAX_SIZE - 1) continue;

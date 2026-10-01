@@ -688,8 +688,8 @@
     update() {
       const run = BE.state.run;
       if (run.total >= run.quota) return Run.go("NIGHT_WON");
-      // Effondrement (§5.5) : en zone rouge ou en Débordement, la Nova la plus basse s'effondre en Trou Noir avant la
-      // Bougie ; le bocal se tasse (SETTLE_CANDLE), puis on revient ici (une Nova par passage)
+      // Effondrement (§5.5) : en Débordement, la Nova la plus basse s'effondre en Trou Noir avant la Bougie ; le bocal
+      // se tasse (SETTLE_CANDLE), puis on revient ici (une Nova par passage)
       if (Jar.collapse(run)) { play().settleT = 0; play().candleLog = []; Run.go("SETTLE_CANDLE"); return; }
       const over = Jar.overflowing(run);
       if (over.length) {
@@ -871,11 +871,13 @@
 
   /**
    * Accélération automatique (§5.8) selon la scène et T (temps simulé depuis le lâcher) : pendant le vol (FLIGHT),
-   * ×2 dès auto2 (4 s) et ×3 dès auto3 (7 s) ; ensuite (bocal, tourelles, descente), ×2 dès jar2 (2 s), ×3 dès jar3 (3,5 s).
+   * ×2 dès auto2 (3 s), ×3 dès auto3 (4,5 s), ×4 dès auto4 (6 s) ; ensuite (bocal, tourelles, descente), ×2 dès jar2
+   * (2 s), ×3 dès jar3 (3,5 s).
    */
   Run.autoSpeed = function (scene, T) {
-    const SP = D.PHYS.speed, fl = scene === "FLIGHT";
-    return T >= (fl ? SP.auto3 : SP.jar3) ? 3 : T >= (fl ? SP.auto2 : SP.jar2) ? 2 : 1;
+    const SP = D.PHYS.speed;
+    if (scene === "FLIGHT") return SP.auto4 && T >= SP.auto4 ? 4 : T >= SP.auto3 ? 3 : T >= SP.auto2 ? 2 : 1;
+    return T >= SP.jar3 ? 3 : T >= SP.jar2 ? 2 : 1;
   };
   /** Facteur de vitesse de simulation (§5.8) : 1–4, × turbo (tests). */
   Run.timeScale = function () {

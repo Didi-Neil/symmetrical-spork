@@ -665,11 +665,11 @@
         const Z = D.SIZES[s];
         out.push({ key: "size:" + s, known: starKnown(s), name: Z.nom, sub: "TAILLE " + s + " · RAYON " + Z.r, accent: P.text,
           txt: s === 1 ? "La plus petite lueur. Deux Poussières font une Étincelle." : "Fusionner deux étoiles de taille " + (s - 1) + " : +" + Z.mult + " Mult." +
-            (Z.rBorn ? " Il s'effondre aussitôt : un disque dense et compact qui coule au fond." : ""),
+            (Z.rBorn ? " Une Nova écrasée par un bocal qui déborde s'effondre aussi en Trou Noir : un disque dense et compact qui coule au fond." : ""),
           count: G.stars[s] | 0, countLbl: s === 1 ? "" : "fusions", hint: STAR_HINTS[s], icon: { k: "star", color: STAR_COLORS[s], size: s } });
       }
-      out.push({ key: "size:8", known: (G.stars[8] | 0) > 0, name: "Big Bang", sub: D.BIGBANG.partner < D.MAX_SIZE ? "TROU NOIR + NOVA" : "TROU NOIR + TROU NOIR", accent: P.frag,
-        txt: (D.BIGBANG.partner < D.MAX_SIZE ? "Un Trou Noir qui touche une Nova (ou un autre Trou Noir) l'avale et vide" : "Deux Trous Noirs qui fusionnent vident") +
+      out.push({ key: "size:8", known: (G.stars[8] | 0) > 0, name: "Big Bang", sub: "TROU NOIR + " + D.SIZES[D.BIGBANG.partner].nom.toUpperCase(), accent: P.frag,
+        txt: (D.BIGBANG.partner < D.MAX_SIZE ? "Un Trou Noir qui touche une " + D.SIZES[D.BIGBANG.partner].nom + " ou plus grosse l'avale et vide" : "Deux Trous Noirs qui fusionnent vident") +
           " le bocal : ×10 Mult final.", count: G.stars[8] | 0, countLbl: "",
         hint: "Quand l'abîme dévore l'éclat qui déchire, le monde recommence.", icon: { k: "bigbang" } });
     } else if (tab === "reactions") {

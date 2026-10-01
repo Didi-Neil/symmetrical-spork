@@ -56,9 +56,10 @@
       stoneMass: 1.5, mergeMinAge: 2,
       carryMargin: 16, // bocal gardé par L'Insomniaque à la Vidange : son haut reste hors de la zone rouge (§6.6)
     },
-    // accélération automatique (§5.8, v1.1c) : le vol à travers les clous se joue à ×1 pendant 4 s (×2 à 4 s, ×3 à 7 s) ;
-    // une fois toutes les étoiles au bocal, l'attente du repos accélère comme avant (×2 dès 2 s, ×3 dès 3,5 s après le lâcher)
-    speed: { auto2: 4, auto3: 7, jar2: 2, jar3: 3.5, hold: 3, cap: 4, countHold: 4 },
+    // accélération automatique (§5.8, v1.1c) : le vol à travers les clous se joue à ×1 pendant 3 s (×2 à 3 s, ×3 à 4,5 s,
+    // ×4 à 6 s : un vol dure ≈ 10 s simulées en moyenne) ; une fois toutes les étoiles au bocal, l'attente du repos
+    // accélère comme avant (×2 dès 2 s, ×3 dès 3,5 s après le lâcher)
+    speed: { auto2: 3, auto3: 4.5, auto4: 6, jar2: 2, jar3: 3.5, hold: 3, cap: 4, countHold: 4 },
     previewSteps: 240,
   };
 
@@ -90,11 +91,11 @@
     return r * r * (stone ? D.PHYS.jar.stoneMass : (S && S.mk) || 1);
   };
   /**
-   * Big Bang (§5.5) : un Trou Noir qui touche une étoile de taille ≥ partner l'avale. v1.1c : partner = 6, un Trou Noir
-   * qui touche une Nova suffit (Trou Noir + Trou Noir aussi, bien sûr).
+   * Big Bang (§5.5) : un Trou Noir qui touche une étoile de taille ≥ partner l'avale. v1.1c : partner = 5 (Géante, Nova
+   * ou Trou Noir) ; 6 : Big Bang de l'Insomniaque 4 % ; 7 (règle v1.1b) : 0 %.
    */
-  D.BIGBANG = { xMult: 10, emoji: "🌌", partner: 6 };
-  /** Effondrement (§5.5) : bocal en zone rouge au repos → la Nova la plus basse devient un Trou Noir. */
+  D.BIGBANG = { xMult: 10, emoji: "🌌", partner: 5 };
+  /** Effondrement (§5.5) : bocal au repos en Débordement → la Nova la plus basse devient un Trou Noir, avant la Bougie. */
   D.COLLAPSE = { on: true };
   D.ALCHIMISTE_TN = 21;
 

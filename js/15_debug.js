@@ -1285,7 +1285,7 @@
       assert(!log.some((e) => e.t === "bigbang"), "pas de Big Bang");
     });
   });
-  test("Fusion", "Big Bang : Trou Noir + Nova (ou Trou Noir) ; jamais avec une Géante ni une Pierre ; permis à la Forgeronne", () => {
+  test("Fusion", "Big Bang : Trou Noir + Géante, Nova ou Trou Noir ; jamais avec un Soleil ni une Pierre ; permis à la Forgeronne", () => {
     const bang = (opts, other) => withRun(opts, (run) => {
       run.jar.bodies = [];
       BE.Jar.add(run, { size: 7, color: "braise", x: D.GEOM.jarL + D.SIZES[7].r, y: D.GEOM.floor - D.SIZES[7].r });
@@ -1300,9 +1300,46 @@
     const ec = r.log.find((e) => e.t === "eclat" && e.src === "bigbang");
     eq(ec && ec.n, 7 + 6, "+Éclat = Σ tailles");
     assert(bang({ seed: "BB-2" }, { size: 7, color: "givre" }).bb, "Trou Noir + Trou Noir");
-    assert(!bang({ seed: "BB-3" }, { size: 5, color: "givre" }).bb, "pas avec une Géante");
+    assert(bang({ seed: "BB-6" }, { size: 5, color: "givre" }).bb, "Trou Noir + Géante");
+    assert(!bang({ seed: "BB-3" }, { size: 4, color: "givre" }).bb, "pas avec un Soleil");
     assert(!bang({ seed: "BB-4" }, { size: 5, stone: true }).bb, "pas avec une Pierre");
     assert(bang({ seed: "BB-5", gardien: "forgeronne" }, { size: 6, color: "givre" }).bb, "Forgeronne : le Big Bang n'est pas une fusion mixte");
+  });
+  test("Débordement", "Effondrement : en Débordement, la Nova la plus basse devient un Trou Noir avant la Bougie ; pas de Big Bang silencieux", () => {
+    withRun({ seed: "COL-1" }, (run, st) => {
+      run.jar.bodies = [];
+      const r6 = D.SIZES[6].r, cx = (run.jar.wallL + run.jar.wallR) / 2;
+      const nova = BE.Jar.add(run, { size: 6, color: "braise", x: cx, y: D.GEOM.floor - r6 });
+      BE.Jar.stabilize(run, 240);
+      eq(BE.Jar.collapseCandidate(run), null, "pas d'Effondrement sans Débordement");
+      // deux Pierres empilées sur la Nova : 100 + 92 + 76 px > 164 px sous l'horizon
+      BE.Jar.add(run, { size: 5, stone: true, x: cx + 1, y: D.GEOM.floor - 2 * r6 - 46 });
+      BE.Jar.add(run, { size: 4, stone: true, x: cx - 1, y: D.GEOM.floor - 2 * r6 - 2 * 46 - 38 });
+      BE.Jar.stabilize(run, 60);
+      assert(BE.Jar.overflowing(run).length > 0, "le bocal doit déborder");
+      eq(BE.Jar.collapseCandidate(run), nova, "la Nova du fond");
+      run.candle = 1; run.total = 0; run.shotsLeft = 3;
+      BE.Run.go("CHECK"); BE.Run.update(DT);
+      eq(st.scene, "SETTLE_CANDLE", "le bocal se tasse"); eq(run.candle, 1, "Bougie intacte");
+      assert(run.jar.bodies.some((b) => b.size === 7 && b.r === D.SIZES[7].r) && !run.jar.bodies.some((b) => b.size === 6), "Nova → Trou Noir");
+      eq(run.runStats.collapses, 1); eq(run.runStats.maxSize, 7);
+      advance(st, (s) => s.scene !== "SETTLE_CANDLE" && s.scene !== "CHECK", 5000);
+      eq(run.runStats.bigBangs, 0, "Trou Noir et Pierres : jamais de Big Bang");
+      // la Pierre retombée peut encore dépasser : alors la Bougie (pas de seconde Nova à effondrer)
+      assert(st.scene === "AIM" || st.scene === "SETTLE_CANDLE" || st.scene === "CHECK", "scène " + st.scene);
+    });
+    withRun({ seed: "COL-2" }, (run) => {
+      // un tassement silencieux (orphelin) ne déclenche jamais de Big Bang : il partira au tir suivant
+      run.jar.bodies = [];
+      BE.Jar.add(run, { size: 7, color: "braise", x: D.GEOM.jarL + 40, y: D.GEOM.floor - 40 });
+      BE.Jar.add(run, { size: 5, color: "givre", x: D.GEOM.jarL + 80 + 46 - 0.5, y: D.GEOM.floor - 46 }); // au contact, sur le fond
+      BE.Jar.settle(run);
+      eq(run.runStats.bigBangs, 0, "pas de Big Bang orphelin");
+      eq(run.jar.bodies.length, 2);
+      assert(BE.Jar.isBigBangPair(run.jar.bodies[0], run.jar.bodies[1]), "paire Big Bang au contact");
+      const log = jarRun(run, 5);
+      assert(log.some((e) => e.t === "bigbang"), "Big Bang dès les premiers pas du tir suivant");
+    });
   });
   test("Débordement", "jauge = max(surface / capacité, hauteur du tas) ; 100 % quand le tas touche l'horizon", () => {
     withRun({ seed: "GAU-1" }, (run) => {
