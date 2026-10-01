@@ -263,6 +263,7 @@
     best("maxSize", s);
     if (s >= 2) bump("D01", s);
   });
+  BE.on("collapse", (e) => { countStar(e.size | 0); best("maxSize", e.size | 0); });
   BE.on("bigbang", () => { countStar(8); Meta.completeDefi("D08"); });
   BE.on("reaction", (e) => {
     Meta.discoverReaction(e.id);

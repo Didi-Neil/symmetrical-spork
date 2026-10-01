@@ -672,6 +672,18 @@
     }
     if (e.pure) FX.float(e.x, e.y + 8, "PURE", "#ffffff", 9, { life: 0.65, rise: 6, weight: 900 });
   });
+  // Effondrement d'une Nova en Trou Noir (zone rouge) : anneau qui se referme, aspiration, secousse sourde
+  BE.on("collapse", (e) => {
+    const r = D.SIZES[e.size].r, rb = D.SIZES[e.size].rBorn || r;
+    if (e.body) e.body.squashT = now();
+    FX.ring(e.x, e.y, rb * 1.8, r, P.frag, 0.35, 3, true);
+    FX.banner("EFFONDREMENT", 180, 300, P.frag, 16, 1.4, "La Nova s'effondre en Trou Noir");
+    FX.stop(0.08); FX.shake(4, 0.25); FX.vibrate([20, 30, 20]);
+    for (let i = 0; i < 18; i++) {
+      const a = rnd() * TAU, d = 50 + rnd() * 40;
+      FX.particle(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, { kind: 6, color: P.frag, tx: e.x, ty: e.y, speed: 60, life: 0.6, drag: 0, glow: true, size: 1.6 });
+    }
+  });
   /**
    * Réactions en chaîne (bocal étroit) : une file de 3 lignes au plus, alignée sur la première bannière. La même
    * réaction encore lisible se fusionne (« VAPEUR ×2 ») ; une nouvelle entre en bas et pousse les autres d'une ligne ;

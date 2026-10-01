@@ -429,6 +429,7 @@
   // quota : accord immédiat, puis « ka-ching » au moment où les Ombres se changent en or (après le gel de 0,5 s, §11.3)
   BE.on("quota", () => { A.play("quota"); A.play("kaching", { delay: BE.DATA.FX.nightWonFreeze }); A.duck(0.45, 1.2); });
   BE.on("bigbang", () => { A.play("bigbang"); music.silence(2.6); });
+  BE.on("collapse", (d) => { A.play("merge", { size: d.size, pure: false }); A.duck(0.35, 0.5); });
   BE.on("overflow", () => A.duck(0.8, 1.6));
   BE.on("victory", () => A.duck(0.7, 2.2));
   BE.on("count:start", () => A.play("whoosh"));

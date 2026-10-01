@@ -94,6 +94,8 @@
    * qui touche une Nova suffit (Trou Noir + Trou Noir aussi, bien sûr).
    */
   D.BIGBANG = { xMult: 10, emoji: "🌌", partner: 6 };
+  /** Effondrement (§5.5) : bocal en zone rouge au repos → la Nova la plus basse devient un Trou Noir. */
+  D.COLLAPSE = { on: true };
   D.ALCHIMISTE_TN = 21;
 
   // ================================================================ Familles (§5.6)

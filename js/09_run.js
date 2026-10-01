@@ -91,7 +91,7 @@
       clous: { A: null, B: null, C: null, D: null, E: null, F: null },
       firm: Firm.create(), jar: Jar.create(), nextId: 1, nextBagId: 1,
       phase: "AIM", pendingAngle: null, shop: null, lastCtx: null, lastShot: null, lastReward: null,
-      runStats: { shots: 0, merges: 0, pureMerges: 0, kills: 0, reactions: 0, stones: 0, maxSize: 0, gold: 0, bigBangs: 0, lightTotal: 0, bestShot: null },
+      runStats: { shots: 0, merges: 0, pureMerges: 0, kills: 0, reactions: 0, stones: 0, maxSize: 0, gold: 0, bigBangs: 0, collapses: 0, lightTotal: 0, bestShot: null },
       nightBest: [], nightMax: 0, result: null, aimAngle: 90,
     };
     const bagKey = g.bag === "standard" && BE.Meta && BE.Meta.hasRoom("serre") ? "standardSeve" : g.bag;
@@ -688,6 +688,9 @@
     update() {
       const run = BE.state.run;
       if (run.total >= run.quota) return Run.go("NIGHT_WON");
+      // Effondrement (§5.5) : en zone rouge ou en Débordement, la Nova la plus basse s'effondre en Trou Noir avant la
+      // Bougie ; le bocal se tasse (SETTLE_CANDLE), puis on revient ici (une Nova par passage)
+      if (Jar.collapse(run)) { play().settleT = 0; play().candleLog = []; Run.go("SETTLE_CANDLE"); return; }
       const over = Jar.overflowing(run);
       if (over.length) {
         if (run.candle > 0) {

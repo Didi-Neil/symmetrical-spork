@@ -129,6 +129,9 @@
         if (b.stone || b.mergedStep === J.step || b.age < PJ.mergeMinAge) continue;
         const bb = Jar.isBigBangPair(a, b);
         if (b.size !== a.size && !bb) continue;
+        // pas de Big Bang dans un tassement silencieux (L'Étau, Bougie, Effondrement, Vidange) : son ×10 serait perdu.
+        // Les deux corps restent au contact et le Big Bang part au tir suivant (dès les premiers pas du vol)
+        if (bb && S.orphan) continue;
         const dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r + 1;
         if (dx * dx + dy * dy > rr * rr) continue;
         // La Forgeronne : pas de fusion mixte ; le Big Bang n'est pas une fusion (aucune réaction), il reste permis
@@ -288,6 +291,34 @@
     S.log.push({ t: "eclat", n: sum, src: "bigbang" });
     run.runStats.bigBangs++;
     BE.emit("bigbang", { x, y, sizes: sum });
+  };
+
+  /**
+   * Effondrement (§5.5, v1.1c) : bocal au repos en zone rouge (Jar.danger) ou débordant, avec une Nova → la Nova la plus
+   * basse (y max, puis id min) s'effondre en Trou Noir (rayon 40 : le tas retombe). Pas de Mult (rien n'a fusionné).
+   * Renvoie le Trou Noir créé, ou null. L'appelant laisse ensuite le bocal se tasser (SETTLE_CANDLE, fusions → réserve).
+   */
+  Jar.collapseCandidate = function (run) {
+    if (!(D.COLLAPSE && D.COLLAPSE.on)) return null;
+    if (!Jar.danger(run) && !Jar.overflowing(run).length) return null;
+    let best = null;
+    for (const b of run.jar.bodies) {
+      if (b.stone || b.size !== D.MAX_SIZE - 1) continue;
+      if (!best || b.y > best.y || (b.y === best.y && b.id < best.id)) best = b;
+    }
+    return best;
+  };
+  Jar.collapse = function (run) {
+    const nova = Jar.collapseCandidate(run);
+    if (!nova) return null;
+    Jar.remove(run, nova);
+    const tn = Jar.add(run, { size: D.MAX_SIZE, color: nova.color, x: nova.x, y: nova.y + (nova.r - D.SIZES[D.MAX_SIZE].r), pure: false });
+    tn.age = PJ.mergeMinAge; tn.bornT = BE.state ? BE.state.time : 0; tn.shotNo = run.runStats.shots;
+    run.runStats.collapses = (run.runStats.collapses || 0) + 1;
+    run.runStats.maxSize = Math.max(run.runStats.maxSize, D.MAX_SIZE);
+    Phys.wakeAll(run.jar);
+    BE.emit("collapse", { body: tn, x: tn.x, y: tn.y, size: tn.size, color: tn.color });
+    return tn;
   };
 
   // ---------------------------------------------------------------- requêtes

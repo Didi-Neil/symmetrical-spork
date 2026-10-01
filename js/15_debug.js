@@ -385,7 +385,7 @@
     rec.relics = run.relics.map((r) => r.id);
     for (const r of run.relics) if (rec.relicsEver.indexOf(r.id) < 0) rec.relicsEver.push(r.id);
     rec.reactions = Object.assign({}, run.reactionCounts);
-    rec.bigBangs = run.runStats.bigBangs; rec.bigBang = run.runStats.bigBangs > 0;
+    rec.bigBangs = run.runStats.bigBangs; rec.bigBang = run.runStats.bigBangs > 0; rec.collapses = run.runStats.collapses || 0;
     rec.kills = run.runStats.kills; rec.stones = run.runStats.stones; rec.maxSize = run.runStats.maxSize;
     delete rec.spent;
     return rec;
@@ -522,6 +522,8 @@
       bossFill: avg(bossFills), bossFillWon: avg(bossFillsWon), bossAreaFill: avg(bossArea), goldSpent: avg(ok.map((r) => r.goldSpent || 0)), goldEarned: avg(ok.map((r) => r.goldEarned || 0)),
       goldEnd: avg(ok.map((r) => r.goldEnd || 0)), wonMinutes: avg(won.map((r) => r.estTime / 60)), allMinutes: avg(ok.map((r) => r.estTime / 60)),
       bigBangRate: ok.length ? ok.filter((r) => r.bigBang).length / ok.length : NaN, byNight,
+      blackHoleRate: ok.length ? ok.filter((r) => r.maxSize >= D.MAX_SIZE).length / ok.length : NaN,
+      collapseRate: ok.length ? ok.filter((r) => r.collapses > 0).length / ok.length : NaN,
       lightPerShot: Object.keys(light).sort((a, b) => a - b).map((L) => ({ lune: +L, avg: light[L].sum / light[L].shots, shots: light[L].shots })),
       reactions, mergeSizes: sizes, dominant, shotsPerRun: avg(ok.map((r) => r.shots)),
     };
@@ -572,6 +574,7 @@
     const rs = Object.keys(S.reactions).sort((a, b) => S.reactions[b] - S.reactions[a]);
     L.push("Réactions (par run) : " + (rs.length ? rs.map((k) => (D.REACTIONS[k] ? D.REACTIONS[k].nom : k) + " " + decTxt(S.reactions[k] / S.n, 2)).join(" · ") : "aucune"));
     const ms = Object.keys(S.mergeSizes).sort((a, b) => a - b);
+    L.push("Trou Noir atteint : " + pctTxt(S.blackHoleRate) + " des runs (dont Effondrement d'une Nova : " + pctTxt(S.collapseRate) + ") · Big Bang : " + pctTxt(S.bigBangRate));
     L.push("Fusions par taille (par run) : " + (ms.length ? ms.map((k) => (k === "8" ? "Big Bang" : "→" + k) + " " + decTxt(S.mergeSizes[k] / S.n, 2)).join(" · ") : "aucune"));
     if (S.dominant.length) L.push("Reliques des runs gagnés : " + S.dominant.slice(0, 6).map((d) => d.nom + " " + pctTxt(d.share)).join(" · ") +
       (S.dominant[0].share > 0.6 ? "  ⚠ build dominant ?" : ""));
