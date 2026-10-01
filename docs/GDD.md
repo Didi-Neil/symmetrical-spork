@@ -1,4 +1,4 @@
-# BOCAL D'ÉTOILES — Document de design final (GDD v1.1b)
+# BOCAL D'ÉTOILES — Document de design final (GDD v1.1c)
 
 > Seul document de référence du projet. Tout ce qui n'y figure pas n'est pas dans la v1. Les valeurs chiffrées sont des valeurs de départ, à ajuster uniquement dans `data.js`.
 
@@ -18,6 +18,14 @@
 > - L'Insomniaque : or de Vidange seulement pour les étoiles qui partent ; Mult final ×1,3 (§6.6). Balance / Équilibre / D02 recalés sur la nouvelle jauge (§8.1, §9.3). Lune 2 : quota 900 → 800, reporté sur les Lunes 4–5 (§6.1). Sauvegarde `v:2`, runs `v:1` migrés (§9.7). Tirs d'apprentissage annoncés (intro, Aube, Lune 2).
 > - **Aucune défaite sans recours** : la règle du trop-plein s'applique aussi **au début de chaque nuit** (Verre soufflé acheté à l'Aube, L'Étau qui resserre les murs, §2.1 étape 7) ; la Vidange partielle de L'Insomniaque laisse le bocal **hors de la zone rouge** (16 px, §6.6) ; le terme surface de la jauge plafonne à 99 % pour que **100 % = Débordement** exactement (§4) ; un run `v:1` migré ou une sauvegarde écartée est annoncé par un message (§9.7). Contrôles des stratégies dégénérées et test de fumée sans Bougie consignés en §13.3.
 > - Mesure finale (500 runs greedy) : 9/9 ; remplissage fin de Nuit du Boss **65,8 %** (Nuits du Boss gagnées seules 62,7 % ; 34,8 % de la surface brute), Débordement **25,9 %** des défaites, victoire 18,0 %, durée d'un run gagné 13,5 min.
+
+> **v1.1c — climax du bocal étroit** (revue : le Trou Noir, le Big Bang, le défi D08, la Singularité et l'archétype Tour de Babel restaient hors d'atteinte ; mesure v1.1b sur 200 runs : Trou Noir 0 % Veilleuse / 1 % Insomniaque, Big Bang 0 %) :
+> - **Trou Noir effondré** (§5.2) : rayon au bocal 40 (Ø 80, au lieu de 58), dense (masse × 2,1). La Nova (Ø 100) devient la plus grosse étoile du bocal ; horizon toujours borné à 492 (§4).
+> - **Effondrement** (§5.5, §2.1 étape 7) : au Débordement, avant la Bougie, la Nova la plus basse s'effondre en Trou Noir (le tas retombe de 20 px). Une Nova est une assurance, une fois ; le Trou Noir naît sous la pression, sans exiger deux Novas au contact.
+> - **Big Bang = Trou Noir + Géante, Nova ou Trou Noir** (§5.5) : un Trou Noir avale l'étoile de taille ≥ 5 qu'il touche. Jamais pendant un tassement silencieux : il part alors au tir suivant, qui reçoit le ×10. Permis à la Forgeronne.
+> - **Cible Big Bang de L'Insomniaque rétablie** (10–20 %, §13.3).
+> - **Accélération automatique par phase** (§5.8) : le vol se joue à ×1 pendant 3 s (×2 à 3 s, ×3 à 4,5 s, ×4 à 6 s) ; une fois les étoiles au bocal, ×2 dès 2 s et ×3 dès 3,5 s comme avant.
+> - Mesure (200 runs greedy, Éclipse 0) : Veilleuse **9/9**, Big Bang **0,5 %**, Trou Noir 2 %, durée d'un run gagné **13,9 min** ; Insomniaque Big Bang **16 %**, Trou Noir 37 %, victoire 24 % (v1.1b : 12,5 %) ; Forgeronne (100 runs) victoire 10 %. Détail : `docs/ARCHITECTURE.md` §16.3, point 11.
 
 ---
 
@@ -985,13 +993,13 @@ CHECK → RUN_LOST | RUN_WON → RUN_END → TITLE
 | Remplissage moyen en fin de Nuit du Boss (Σ aires / capacité, §4) | 55 à 75 % |
 | Or moyen dépensé par run | 90 à 130 |
 | Durée simulée d'un run gagné (temps réel estimé) | 10 à 14 min |
-| Big Bang | < 3 % des runs (Insomniaque : cible 10 à 20 % **suspendue** depuis la v1.1 ; mesurée, affichée N/A — voir la note ci-dessous) |
+| Big Bang | < 3 % des runs (L'Insomniaque, 200 runs : **10 à 20 %** ; suspendue en v1.1 / v1.1b, rétablie en v1.1c — voir la note ci-dessous) |
 
 **Échelle du remplissage (v1.1b).** La cible 55–75 % se lit sur la **jauge** (§4 : max(Σ aires / capacité, hauteur du tas), capacité = surface utile × 0,6), pas sur la surface brute comme en v1.0 : 58 % de jauge ≈ 35 % de la surface brute sous l'horizon. `tools/balance.js` affiche les trois lectures (jauge toutes nuits, jauge des seules Nuits du Boss gagnées, part surfacique brute) ; la moyenne « toutes nuits » est tirée vers le haut par les Nuits du Boss perdues (souvent par Débordement, donc à 100 %), la valeur « nuits gagnées seules » doit rester ≥ 50 %.
 
-**Big Bang (v1.1b).** Deux Trous Noirs qui se touchent fusionnent (les fusions se font au contact, le Débordement n'est vérifié qu'au repos) : ce n'est donc pas « deux Trous Noirs ne tiennent pas sous l'horizon » qui bloque le Big Bang, mais le chemin pour y arriver — un Trou Noir (Ø 116) doit cohabiter avec les deux Novas (Ø 100) qui en feront un second. Avec les rayons v1.1b (Nova 50, Trou Noir 58), le Trou Noir redevient atteignable (≈ 3 % des runs de L'Insomniaque, quelques runs Forgeronne / Alchimiste) mais le Big Bang reste un exploit : le défi D08 et la Singularité sont des récompenses rares, c'est voulu. La cible Insomniaque 10–20 % reste suspendue.
+**Big Bang (v1.1c).** En v1.1b, le Big Bang (deux Trous Noirs) n'apparaissait dans aucun run : il fallait quatre Novas, soit 128 Poussières de matière, et un Trou Noir (Ø 116) au contact de deux Novas (Ø 100) dans un bocal de 200 px ; même le Trou Noir n'apparaissait que dans 1 % des runs de L'Insomniaque (deux Novas au contact dans 3,5 % des runs). La v1.1c rend le chemin court et lié à la tension du bocal (§5.5) : une Nova écrasée par un Débordement **s'effondre** en Trou Noir compact (Ø 80), et un Trou Noir qui touche une Géante ou plus grosse déclenche le Big Bang. Leviers mesurés (Insomniaque, 100 runs) : Trou Noir effondré seul, Big Bang Trou Noir + Trou Noir : 0 % ; + Effondrement en zone rouge et Big Bang Trou Noir + Nova : 4 % ; Trou Noir + Géante : 21 % (Trou Noir dans 37 % des runs) ; **Effondrement au Débordement seulement** : 14 %, retenu. Mesure finale (200 runs) : **Veilleuse 0,5 %** (Trou Noir 2 % : la Vidange vide son bocal à chaque Lune), **Insomniaque 16 %** (Trou Noir 37 % : son bocal garde les Soleils et plus d'une Lune à l'autre, c'est son climax). L'Effondrement allège aussi le bocal de L'Insomniaque (victoire 12,5 % → 24 %, Débordements 64,6 % → 53,9 % des défaites), toujours dans la cible des Gardiens (5–40 %) ; la Veilleuse ne bouge pas (9/9, Débordements 28,5 %). D08 et la Singularité restent des récompenses rares, mais atteignables, sans devoir jouer L'Insomniaque.
 
-**Viabilité des archétypes (§13.5, v1.1b).** À chaque changement de géométrie du bocal on vérifie, dans un bac à sable (`BE.Debug.withRun`), que les tailles dont dépend un archétype tiennent sous l'horizon le plus bas (492) : Trou Noir seul, Trou Noir + Astre, Nova + Géante côte à côte (tests « Débordement » de `tools/test.js`). Un archétype dont la pièce maîtresse ne peut pas exister dans le bocal est du contenu mort.
+**Viabilité des archétypes (§13.5, v1.1b).** À chaque changement de géométrie du bocal on vérifie, dans un bac à sable (`BE.Debug.withRun`), que les tailles dont dépend un archétype tiennent sous l'horizon le plus bas (492) : Trou Noir seul, Trou Noir + Astre, Nova + Géante côte à côte (tests « Débordement » de `tools/test.js`) ; v1.1c : Effondrement, Big Bang Trou Noir + Géante / Nova / Trou Noir, jamais avec un Soleil ni une Pierre, ni pendant un tassement silencieux (tests « Fusion » et « Débordement »). Un archétype dont la pièce maîtresse ne peut pas exister dans le bocal est du contenu mort.
 
 **Stratégies dégénérées (v1.1b).** À chaque changement de règle du bocal, on vérifie qu'aucune politique triviale ne rivalise avec `greedy` (bac à sable, politiques ajoutées à `BE.Debug.POLICIES`, 30 runs chacune, sans échange). Mesure v1.1b : `greedy` passe la Lune 3 dans 22/30 runs (5 victoires) ; **toujours tirer à 90°** ou **toujours à 30°** passent la Lune 1 (25/30 et 24/30, grâce aux tirs d'apprentissage) mais jamais la Lune 3 ; **remplir exprès** (tir qui monte le plus la jauge, pour profiter du trop-plein évaporé à la victoire) ne passe la Lune 1 que 9 fois sur 30 et perd par Débordement 25 fois. Le trop-plein évaporé (à la victoire, en début de nuit, à la Vidange de L'Insomniaque) coûte toujours des étoiles et n'est jamais une source de Lumière ou d'or : ce n'est pas une stratégie. Même contrôle pour les seuils conditionnels (Balance < 50 % sur ≈ 59 % des tirs, Équilibre < 60 % sur ≈ 70 %, D02 < 35 % sur ≈ 10 % des nuits gagnées) : un bonus « bocal bas » doit rester un choix, ni toujours vrai (v1.0 : ≈ 100 %) ni introuvable.
 
@@ -1018,7 +1026,7 @@ CHECK → RUN_LOST | RUN_WON → RUN_END → TITLE
 ### 13.5 Archétypes attendus (vérifier qu'ils sont viables)
 
 - **FLIPPER :** Sève, Comète, Clous Ressort en paire, Écho, Balance. Beaucoup de rebonds et un bocal peu rempli.
-- **TOUR DE BABEL :** Sac monocolore, Alchimiste, Couronne, Forgeronne. Fusions pures et Trou Noir.
+- **TOUR DE BABEL :** Sac monocolore, Alchimiste, Couronne, Forgeronne. Fusions pures et Trou Noir (v1.1c : une Nova gardée sous un bocal plein devient un Trou Noir par Effondrement ; une Géante qui le touche déclenche le Big Bang).
 - **TOURELLE :** Foudre, Paratonnerre, Plasma, Chasseur. Le bocal nettoie le Firmament.
 - **DÉCHETS :** Corbeau, Carrière, Braise, Cendre, puis Fonderie. On laisse passer les Lourdes pour les briser.
 - **VAPEUR / PRESSION :** Braise et Givre, Pression, Vapeur, Catalyseur. On joue avec un bocal plein et tassé.
