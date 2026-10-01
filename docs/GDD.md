@@ -119,7 +119,7 @@ On retient **BOCAL D'ÉTOILES**. C'est le concept le plus original (9/9/9), celu
 4. **TOURELLES** (0 à 1,5 s). Chaque étoile Foudre du bocal tire un éclair sur l'Ombre la plus basse.
 5. **DÉCOMPTE** (1 à 2,5 s, accélérable). On affiche l'Éclat de base et le Mult de base, puis les reliques de gauche à droite, puis la **Lumière = ⌊Éclat × Mult⌋**, qui s'ajoute au total de la nuit.
 6. **DESCENTE** (0,6 s). Les compteurs des Ombres baissent. Celles qui arrivent à 0 descendent d'une rangée, celles de la rangée 5 tombent dans le bocal comme Pierres Noires, et la rangée fantôme apparaît en haut.
-7. **VÉRIFICATION.** Si le quota est atteint, la nuit est gagnée : ce qui dépasse alors la ligne d'horizon s'évapore (« le quota éteint le trop-plein », sans Bougie ni or), si bien qu'une nuit ne commence jamais en Débordement. La même règle s'applique **au début de chaque nuit** : si la ligne est descendue entre-temps (Verre soufflé acheté à l'Aube) ou si L'Étau resserre les murs et fait remonter le tas, ce qui dépasse s'évapore avant le premier tir (message « Trop-plein évaporé »). Le joueur ne perd donc jamais un run sur un bocal qu'il n'a pas pu jouer : un Débordement suit toujours un tir de la nuit en cours. Sinon, si un objet au repos dépasse la ligne d'horizon, c'est le Débordement. Sinon, si les tirs sont épuisés, la nuit est perdue. Sinon, on passe au tir suivant.
+7. **VÉRIFICATION.** Si le quota est atteint, la nuit est gagnée : ce qui dépasse alors la ligne d'horizon s'évapore (« le quota éteint le trop-plein », sans Bougie ni or), si bien qu'une nuit ne commence jamais en Débordement. La même règle s'applique **au début de chaque nuit** : si la ligne est descendue entre-temps (Verre soufflé acheté à l'Aube) ou si L'Étau resserre les murs et fait remonter le tas, ce qui dépasse s'évapore avant le premier tir (message « Trop-plein évaporé »). Le joueur ne perd donc jamais un run sur un bocal qu'il n'a pas pu jouer : un Débordement suit toujours un tir de la nuit en cours. Sinon, si un objet au repos dépasse la ligne d'horizon : une Nova s'effondre d'abord en Trou Noir s'il y en a une (§5.5, le tas retombe et on revérifie), puis la Bougie, sinon c'est le Débordement. Sinon, si les tirs sont épuisés, la nuit est perdue. Sinon, on passe au tir suivant.
 
 ### 2.2 Boucle de run (10 à 14 min)
 
@@ -129,7 +129,7 @@ On retient **BOCAL D'ÉTOILES**. C'est le concept le plus original (9/9/9), celu
 - **Le Bocal reste plein pendant les 3 nuits d'une Lune** (la tension monte, mais le Mult potentiel aussi, et c'est pour cela que la Nuit Mince a le plus petit quota). Il est **vidé** à la fin de la Lune (Vidange ; L'Insomniaque ne perd que ses petites étoiles, §6.6).
 - **Aube** (boutique) après chaque nuit gagnée : reliques, étoiles, clous, gravures, paquet Constellation, relance, verrouillage, vente, épuration du Sac.
 - **La règle du boss** de la Lune est annoncée dès l'Aube qui précède la Nuit du Boss, et aussi sur la carte d'introduction de la Lune.
-- **Défaite :** fin de nuit sous le quota, ou Débordement sans Bougie de secours.
+- **Défaite :** fin de nuit sous le quota, ou Débordement sans Nova à effondrer ni Bougie de secours.
 - **Victoire :** Boss de la Lune 5 (L'Éclipse) passé. On peut ensuite continuer en **Nuit Blanche** (Lunes infinies) si le Planétarium est construit.
 
 ### 2.3 Boucle méta
@@ -253,10 +253,10 @@ Un emplacement spécial qui contient un clou spécial est toujours présent, que
 | 4 | Soleil | 32 | 38 | 4 536 | +3 | 🌟 |
 | 5 | Géante | 40 | 46 | 6 648 | +5 | 🟠 |
 | 6 | Nova | 50 | 50 | 7 854 | +8 | 💥 |
-| 7 | Trou Noir (effondré) | — (jamais lancé) | 40 (naît à 58, §5.5) | 5 027 | +13 | 🕳️ |
-| 7+6 ou 7+7 | **Big Bang** | — | — | — | **×10 final** | 🌌 |
+| 7 | Trou Noir (effondré) | — (jamais lancé) | 40 (naît à 58, §5.5) | 5 027 | +13 (Nova + Nova ; 0 par Effondrement) | 🕳️ |
+| 7 + 5, 6 ou 7 | **Big Bang** | — | — | — | **×10 final** | 🌌 |
 
-- **Deux rayons** (amendement « géométrie du bocal ») : le Firmament est loin, le verre du bocal grossit. En vol, l'étoile garde son petit rayon (le treillis de clous, écart 44 px, reste traversable) ; en entrant dans le bocal elle prend son **rayon au bocal** (animation de 0,16 s). La courbe du bocal est aplatie (×1,2 par taille au lieu de ×1,3) : une fusion libère **20 à 30 %** de place, et les petites étoiles pèsent vraiment dans le bocal. **v1.1b** : le haut de la courbe est encore aplati (Nova 50, Trou Noir 58 au lieu de 55 / 66) ; avec 55 / 66, une Nova et une Géante ou un Trou Noir et un Astre ne tenaient pas côte à côte sous l'horizon, et le Trou Noir n'apparaissait dans aucun des 1 900 runs mesurés (Big Bang, D08, Singularité et l'archétype Tour de Babel devenaient du contenu mort). Désormais Nova + Géante (192 px) et Trou Noir + Astre tiennent sur le fond, et un Trou Noir seul reste sous l'horizon le plus bas (§4). **v1.1c — Trou Noir effondré** : même à 58 px, le Big Bang restait hors d'atteinte (0 % des runs, Insomniaque comprise) ; le Trou Noir **s'effondre** désormais en un disque compact de **rayon 40** (Ø 80), dense (masse × 2,1, soit celle d'un disque de 58 px : il coule au fond et ne se laisse pas soulever). Il reste le plus gros Mult de fusion (+13) mais ne coûte plus que 5 027 px² au bocal, moins qu'une Géante : c'est la récompense d'avoir tenu deux Novas sous la ligne, et il laisse la place de préparer le Big Bang (§5.5). La Nova (Ø 100) est donc la plus grosse étoile du bocal.
+- **Deux rayons** (amendement « géométrie du bocal ») : le Firmament est loin, le verre du bocal grossit. En vol, l'étoile garde son petit rayon (le treillis de clous, écart 44 px, reste traversable) ; en entrant dans le bocal elle prend son **rayon au bocal** (animation de 0,16 s). La courbe du bocal est aplatie (×1,2 par taille au lieu de ×1,3) : une fusion libère **20 à 30 %** de place, et les petites étoiles pèsent vraiment dans le bocal. **v1.1b** : le haut de la courbe est encore aplati (Nova 50, Trou Noir 58 au lieu de 55 / 66) ; avec 55 / 66, une Nova et une Géante ou un Trou Noir et un Astre ne tenaient pas côte à côte sous l'horizon, et le Trou Noir n'apparaissait dans aucun des 1 900 runs mesurés (Big Bang, D08, Singularité et l'archétype Tour de Babel devenaient du contenu mort). Désormais Nova + Géante (192 px) et Trou Noir + Astre tiennent sur le fond, et un Trou Noir seul reste sous l'horizon le plus bas (§4). **v1.1c — Trou Noir effondré** : même à 58 px, le Big Bang restait hors d'atteinte (0 % des runs mesurés, Insomniaque comprise : le Trou Noir n'apparaissait que dans 1 % de ses runs, faute de deux Novas au contact). Le Trou Noir est désormais un astre **effondré** : un disque compact de **rayon 40** (Ø 80), dense (masse × 2,1, soit celle d'un disque de 58 px : il coule au fond et ne se laisse pas soulever). Il vaut toujours +13 Mult quand il naît d'une fusion, mais ne coûte plus que 5 027 px² au bocal, moins qu'une Géante : il laisse la place de préparer le Big Bang (§5.5). La Nova (Ø 100) est donc la plus grosse étoile du bocal.
 
 - Taille maximale **lancée** : 5 (au-delà, les bonus de taille sont perdus).
 - Dégâts aux Ombres = **taille** (+ modificateurs).
@@ -307,8 +307,8 @@ Broadphase : O(n²), suffisant jusqu'à 60 corps. Le plafond de sécurité est d
 - **Ordre de résolution :** paires triées par (min id, max id), et une seule fusion par corps et par pas.
 - **Résultat :** nouvelle étoile de taille s+1 placée au barycentre pondéré par la masse. `v = (v1 + v2)/2 × 0,5`. Elle reçoit un nouvel `id`. Les chevauchements sont résolus par le solveur de position.
 - **Couleur :** si les deux étoiles ont la même couleur, la fusion est **pure** (Mult de la fusion ×1,5, arrondi au 0,5 supérieur). Si les couleurs diffèrent, la **réaction** de la paire se déclenche et l'étoile obtenue prend la couleur principale de l'étoile au plus petit `id` (la plus ancienne), avec un anneau bicolore visuel pendant 1 s.
-- **Effondrement (v1.1c) :** Nova + Nova donne un Trou Noir qui naît au diamètre de la Nova (58 px à l'écran) et s'effondre en 0,3 s à son rayon au bocal de 40 px (anneau violet qui se referme, « EFFONDREMENT »). Côté physique, il a son rayon de 40 px dès sa création (masse × 2,1).
-- **Trou Noir + Nova (ou Trou Noir) = Big Bang (v1.1c) :** un Trou Noir qui touche une Nova ou un autre Trou Noir l'avale : tous les corps du bocal (étoiles et Pierres) disparaissent. On ajoute **+Éclat = somme des tailles disparues** et on applique un **×10 final** au tir. Jusqu'à la v1.1b, seuls deux Trous Noirs déclenchaient le Big Bang : il fallait tenir un Trou Noir et deux Novas à la fois sous la ligne, ce que le bocal de 200 px ne permet presque jamais. Il faut désormais trois Novas en tout (deux pour le Trou Noir, une troisième qui le touche). La Forgeronne peut déclencher un Big Bang entre deux couleurs : ce n'est pas une fusion (ni pureté ni réaction). Réglage : `DATA.BIGBANG.partner` (6 ; 7 = règle v1.1b).
+- **Effondrement (v1.1c) :** le Trou Noir naît de deux façons. (1) **Nova + Nova** (fusion, +13 Mult). (2) **Une Nova écrasée par un bocal qui déborde** : au repos, quand un corps dépasse l'horizon (vérification du Débordement, §2.1 étape 7), **avant la Bougie**, la Nova la plus basse (celle qui porte le tas ; égalité : la plus ancienne) s'effondre en Trou Noir, sans Mult (rien n'a fusionné). Le tas retombe de 20 px sous elle, le bocal se tasse (fusions → réserve), puis le Débordement est revérifié : une autre Nova peut s'effondrer, sinon la Bougie, sinon la défaite. Une Nova est donc une assurance contre le Débordement, une seule fois. À l'écran, le Trou Noir naît au diamètre de la Nova (58 px) et se contracte en 0,3 s (anneau violet qui se referme, bannière « EFFONDREMENT » pour l'effondrement sous pression) ; côté physique, il a son rayon de 40 px dès sa création.
+- **Big Bang (v1.1c) : un Trou Noir qui touche une Géante, une Nova ou un autre Trou Noir l'avale** : tous les corps du bocal (étoiles et Pierres) disparaissent. On ajoute **+Éclat = somme des tailles disparues** et on applique un **×10 final** au tir. Jusqu'à la v1.1b, seuls deux Trous Noirs déclenchaient le Big Bang : il fallait tenir un Trou Noir et deux Novas à la fois sous la ligne, ce que le bocal de 200 px ne permet presque jamais (et le matériau d'un run n'y suffit pas : 4 Novas = 128 Poussières). Le Big Bang ne part **jamais pendant un tassement silencieux** (Effondrement, Bougie, L'Étau, Vidange : son ×10 serait perdu) : les deux corps restent au contact, visibles à la visée, et le Big Bang part dans les premiers pas du tir suivant, qui en reçoit le ×10. La Forgeronne peut déclencher un Big Bang entre deux couleurs : ce n'est pas une fusion (ni pureté ni réaction). Réglage : `DATA.BIGBANG.partner` (5 ; mesuré : 6 → Big Bang de l'Insomniaque 4 % ; 7 = règle v1.1b, 0 %), `DATA.COLLAPSE.on`.
 - **Pierre Noire brisée :** à chaque fusion, toute Pierre dont `dist(centre nouvelle étoile, pierre) ≤ r_new + r_pierre + 4` est détruite, ce qui donne **+2 Mult** par Pierre (en plus des reliques).
 - **Fusions orphelines :** une fusion qui se produit pendant la DESCENTE (Pierre qui tombe, rétrécissement de L'Étau) produit son Mult dans la **réserve**, ajoutée au Mult de base du tir suivant (affichée « +2 en réserve » en rouge sous le Phare).
 
@@ -340,9 +340,9 @@ La Forgeronne ne peut pas faire de fusion mixte : deux étoiles de couleurs diff
 ### 5.8 Durée d'un tir, accélérations, garde-fous
 
 - **Temps de simulation écoulé depuis le lâcher (T) :**
-  - **Pendant le vol** (au moins une étoile dans le Firmament) : T ≥ 4 s : vitesse ×2 (automatique) ; T ≥ 7 s : vitesse ×3. La traversée des clous, le cœur « Peglin » du tir, se joue à ×1.
+  - **Pendant le vol** (au moins une étoile dans le Firmament) : T ≥ 3 s : vitesse ×2 (automatique) ; T ≥ 4,5 s : ×3 ; T ≥ 6 s : ×4 (le plafond). Les premiers rebonds dans les clous, le cœur « Peglin » du tir, se jouent à ×1 ; un vol dure ≈ 10 s simulées en moyenne, d'où le palier ×4 qui garde la durée d'un run dans la cible.
   - **Une fois toutes les étoiles au bocal** (repos, tourelles, descente) : T ≥ 2 s : ×2 ; T ≥ 3,5 s : ×3 (l'attente du repos reste courte).
-  - (v1.1c ; v1.1 : ×2 dès 2 s et ×3 dès 3,5 s dans toutes les phases, ce qui accélérait le vol pendant qu'on regardait l'étoile rebondir.)
+  - (v1.1c ; v1.1 : ×2 dès 2 s et ×3 dès 3,5 s dans toutes les phases, ce qui accélérait le vol pendant qu'on regardait l'étoile rebondir. Mesuré : ×2 à 4 s et ×3 à 7 s pendant le vol rallongeait un run gagné de 1,2 min, hors cible.)
   - T ≥ 14 s : les étoiles en vol ignorent clous et Ombres et tombent directement.
 - **Doigt ou F maintenu :** ×3. Le cumul avec l'accélération automatique est plafonné à ×4.
 - **Accélération :** exécuter k pas de 1/120 par tick logique (k = 2, 3 ou 4). Maximum de 8 pas par frame de rendu, et le surplus est reporté.
@@ -441,7 +441,7 @@ Corps du bocal : masse ×1,5, restitution 0,05, ne fusionne jamais. Elle est bri
 **Sac standard (3 couleurs, 10 étoiles) :** Braise 1,1,2 · Givre 1,1,2 · Foudre 1,1,2 · Braise 2.
 **Sac standard avec la Sève débloquée (10 étoiles) :** Braise 1,1,2 · Givre 1,1,2 · Foudre 1,2 · Sève 1,2.
 
-**Bougie de secours :** 1 par run, affichée comme une petite flamme sous le Sac. Au premier Débordement, la bougie s'éteint et **tous les corps dont le haut dépasse la ligne d'horizon s'évaporent**, puis le run continue. Supprimée à l'Éclipse 6.
+**Bougie de secours :** 1 par run, affichée comme une petite flamme sous le Sac. Au premier Débordement (qu'aucune Nova n'a pu empêcher en s'effondrant, §5.5), la bougie s'éteint et **tous les corps dont le haut dépasse la ligne d'horizon s'évaporent**, puis le run continue. Supprimée à l'Éclipse 6.
 
 ---
 
@@ -805,6 +805,7 @@ Volume des effets (0 à 100) · Volume de la musique · Secousses (oui/non) · F
 | Fusion taille ≥ 5 | idem avec 12 particules de la couleur | 60 ms | min(6, 1,5 × (s − 3)) px pendant 200 ms | 15 ms |
 | Réaction | icône de la réaction et son nom (« PLASMA ») au point de fusion, trait coloré | 40 ms | 2 px | 10 ms |
 | Pierre brisée | 6 éclats gris, « +2 » rouge | 30 ms | 2 px | — |
+| Effondrement (Nova → Trou Noir, v1.1c) | le disque se contracte de 58 à 40 px en 0,3 s, anneau violet qui se referme, aspiration de particules, « EFFONDREMENT » (bannière dans le ciel s'il naît sous la pression du Débordement) | 80 ms | 4 px pendant 250 ms | 20-30-20 ms |
 | Big Bang | flash blanc plein écran 120 ms (réduit à 30 % avec « Flashs réduits »), 300 ms de silence, onde blanche, « BIG BANG ×10 » | 300 ms | 8 px pendant 400 ms | 40-30-40 ms |
 | Quota atteint | **gel de 0,5 s**, puis les Ombres restantes se changent en fumée dorée aspirée vers la jauge avec un « ka-ching », pluie de 30 paillettes `--or` | — | — | 20 ms |
 | Débordement | horizon rouge vif, l'étoile fautive tremble, « DÉBORDEMENT » | 200 ms | 4 px | 60 ms |
@@ -838,6 +839,7 @@ Gel de 0,5 s, puis conversion des Ombres (1 s), puis décompte de l'or (« Tirs 
 | Relique déclenchée | Cloche FM brève, en do majeur, un degré par emplacement |
 | Total du tir | Accord majeur arpégé (3 notes, 40 ms d'écart), avec une octave de plus si Lumière ≥ quota / 2 |
 | Or / « ka-ching » | Deux sinus (1 318 et 1 760 Hz, 120 ms), plus un clic de bruit |
+| Effondrement | Son de fusion de taille 7 (grave à 41 Hz), musique atténuée 0,5 s |
 | Big Bang | Silence de 300 ms (le master tombe à 0 en 20 ms), puis un accord do-mi-sol-do (sinus et dent de scie filtrée à 1 800 Hz) de 2 s |
 | Horizon en danger | « Battement de cœur » : sinus 60 Hz, 2 impulsions de 80 ms toutes les 1,2 s |
 | Débordement | Glissando de dent de scie 400 → 80 Hz en 600 ms, filtré |
